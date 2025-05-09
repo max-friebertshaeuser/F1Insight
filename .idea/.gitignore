@@ -9,4 +9,4 @@
 /dataSources/
 /dataSources.local.xml
 # Environment variables
-.env
+backend/.env
