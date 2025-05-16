@@ -1,28 +1,11 @@
-version: '3.9'
+version: '3.8'
 
 services:
   web:
-    build: ../backend
-    command: python manage.py runserver 0.0.0.0:8000
-    volumes:
-      - ./backend:/code
+    build: .
     ports:
       - "8000:8000"
-    env_file:
-      - .env
-    depends_on:
-      - db
-
-  db:
-    image: postgres:15
     volumes:
-      - postgres_data:/var/lib/postgresql/data/
+      - .:/app
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "5432:5432"
-
-volumes:
-  postgres_data:
+      - DJANGO_SETTINGS_MODULE=locallibrary.settings

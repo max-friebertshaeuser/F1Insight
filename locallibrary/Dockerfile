@@ -1,17 +1,21 @@
+# Use the official Python image
+FROM python:3.10-slim
 
-ENTRYPOINT ["top", "-b"]
+# Set the working directory
+WORKDIR /app
 
-# Dockerfile
-FROM python:3.11
-
-LABEL authors="maxfriebertshauser"
-
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
-WORKDIR /code
-
+# Copy the requirements file and install dependencies
 COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY ./backend /code
+# Copy the project files
+COPY . .
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+
+# Expose the port Django will run on
+EXPOSE 8000
+
+# Run the Django development server
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
