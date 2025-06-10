@@ -1,4 +1,4 @@
-# locallibrary/urls.py
+# f1hub/urls.py
 from django.contrib import admin
 from django.views.decorators.http import require_GET
 from django.http import JsonResponse

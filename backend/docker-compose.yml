@@ -2,7 +2,7 @@
 services:
   db:
     image: postgres:17
-    container_name: locallibrary-db
+    container_name: backend-db
     environment:
       POSTGRES_DB: ${DATABASE_NAME}
       POSTGRES_USER: ${DATABASE_USERNAME}
