@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -39,4 +41,37 @@
 
 .read-the-docs {
   color: #888;
+}
+
+
+
+/* Add others as needed */
+/* ✨ CSS-first custom theme values */
+:root {
+
+
+  --font-formula1wide: "Formula1Wide", sans-serif;
+  --font-formula1regular: "Formula1Regular", sans-serif;
+  --font-formula1bold: "Formula1Bold", sans-serif;
+
+  /* F1 Brand Colors */
+  --colors-f1-red: #FF1E00;
+  --colors-f1-black: #15151E;
+  --colors-f1-offwhite: #F7F4F1;
+  --colors-f1-white: #FFFFFF;
+  --colors-f1-gray-30: #2C2C34;
+  --colors-f1-gray-50: #5B5B61;
+  --colors-f1-gray-70: #89898E;
+  --colors-f1-gray-90: #B8B8BB;
+
+  /* Team Colors */
+  --colors-team-mercedes: #00D2BE;
+  --colors-team-redbull: #1E41FF;
+  --colors-team-ferrari: #DC0000;
+  --colors-team-mclaren: #FF8700;
+  --colors-team-astonmartin: #006F62;
+  --colors-team-alpine: #0090FF;
+  --colors-team-williams: #005AFF;
+  --colors-team-alfa: #900000;
+  --colors-team-haas: #B6BABD;
 }
