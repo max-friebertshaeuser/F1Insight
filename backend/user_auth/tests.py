@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 
+
 class LoginTestCase(APITestCase):
     def setUp(self):
         self.username = 'testuser'
@@ -60,5 +61,18 @@ class LoginTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['username'], self.user_data['username'])
 
+    def test_jwt_refresh_token(self):
+        # Login to get refresh token
+        response = self.client.post(self.login_url, {
+            'username': self.username,
+            'password': self.password
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('refresh', response.data)
+        refresh_token = response.data['refresh']
 
-
+        # Use refresh token to get new access token
+        refresh_url = reverse('user_auth:token_refresh')
+        response = self.client.post(refresh_url, {'refresh': refresh_token}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('access', response.data)
