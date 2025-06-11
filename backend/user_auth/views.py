@@ -32,7 +32,8 @@ class RegisterView(generics.CreateAPIView):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def profile_view(request):
+    user = request.user
     return Response({
-        "username": request.user.username,
-        "email": request.user.email
+        "username": user.username,
+        "email": user.email,
     })
