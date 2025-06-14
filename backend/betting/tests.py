@@ -2,7 +2,6 @@ from django.urls import reverse
 from rest_framework.test import APITestCase, APIClient
 from django.contrib.auth.models import User
 from betting.models import Group
-from rest_framework import status
 from django.utils import timezone
 
 

@@ -96,7 +96,7 @@ def remove_group(request):
 
 
 @permission_classes([IsAuthenticated])
-@require_http_methods(["GET"])
+@api_view(["GET"])
 def show_all_races_to_bet(request):
     today = date.today()
     races = Race.objects.filter(date__gte=today).order_by('date')
@@ -105,7 +105,7 @@ def show_all_races_to_bet(request):
 
 
 @permission_classes([IsAuthenticated])
-@require_http_methods(["POST"])
+@api_view(["POST"])
 def set_bet(request):
     user = request.user
     data = json.loads(request.body)
@@ -136,7 +136,7 @@ def set_bet(request):
 
 
 @permission_classes([IsAuthenticated])
-@require_http_methods(["GET"])
+@api_view(["GET"])
 def show_bet(request, race_id):
     user = request.user
     try:
@@ -157,7 +157,7 @@ def show_bet(request, race_id):
 
 
 @permission_classes([IsAuthenticated])
-@require_http_methods(["DELETE"])
+@api_view(["DELETE"])
 def delete_bet(request, race_id):
     user = request.user
     try:
@@ -191,7 +191,7 @@ def update_bet(request, race_id):
 
 
 @permission_classes([IsAuthenticated])
-@require_http_methods(["GET"])
+@api_view(["GET"])
 def get_last_5_drivers_before(request, season, driver_id):
     try:
         target = Driverstanding.objects.get(season__season=season, driver__driver=driver_id)
@@ -223,7 +223,7 @@ def get_last_5_drivers_before(request, season, driver_id):
 
 
 @permission_classes([IsAuthenticated])
-@require_http_methods(["GET"])
+@api_view(["GET"])
 def get_last_5_drivers(request, season, driver_id):
     try:
         target = Driverstanding.objects.get(season__season=season, driver__driver=driver_id)
