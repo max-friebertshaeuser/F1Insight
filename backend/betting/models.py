@@ -11,3 +11,9 @@ class BetStat(models.Model):
     group = models.ForeignKey(Group, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     points = (models.IntegerField(default=0))
+
+class Bets(models.Model):
+    group = models.ForeignKey(Group, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    bet_top_3 = models.ManyToManyField(default=False) # Set Driver as Foreigen key
+    race = models.ForeignKey(max_length=100) # Set race as Foreign key

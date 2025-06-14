@@ -86,3 +86,23 @@ def remove_group(request):
         return Response({'status': 'group deleted successfully'})
     except Group.DoesNotExist:
         return Response({'status': 'group not found'}, status=404)
+
+
+def show_all_races_to_bet():
+    return None
+
+
+def set_bet():
+    return None
+
+
+def show_bet():
+    return None
+
+
+def delet_bet():
+    return None
+
+
+def update_bet():
+    return None
