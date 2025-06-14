@@ -4,89 +4,121 @@ from django.db import models
 from django.db import models
 import uuid
 
+class DataUpdate(models.Model):
+    name      = models.CharField(max_length=50, unique=True)
+    last_run  = models.DateTimeField(auto_now=True)
+
 class Season(models.Model):
-    season_id = models.CharField(primary_key=True, max_length=10)
+    season = models.CharField(primary_key=True, max_length=5)
 
 class Circuit(models.Model):
-    circuit_id = models.CharField(primary_key=True, max_length=10)
+    circuit = models.CharField(primary_key=True, max_length=100)
     name = models.CharField(max_length=100)
     location = models.CharField(max_length=100)
     country = models.CharField(max_length=100)
 
 class Driver(models.Model):
-    driver_id = models.CharField(primary_key=True, max_length=10)
+    driver = models.CharField(primary_key=True, max_length=100)
+    number = models.CharField(max_length=100, blank=True)
     forename = models.CharField(max_length=100)
     surname = models.CharField(max_length=100)
     dob = models.DateField()
     nationality = models.CharField(max_length=100)
 
 class Constructor(models.Model):
-    constructor_id = models.CharField(primary_key=True, max_length=10)
+    constructor = models.CharField(primary_key=True, max_length=100)
     name = models.CharField(max_length=100)
     nationality = models.CharField(max_length=100)
 
 class Race(models.Model):
-    race_id = models.CharField(primary_key=True, max_length=10)
+    date = models.DateField(primary_key=True)
     season = models.ForeignKey(Season, on_delete=models.CASCADE)
     circuit = models.ForeignKey(Circuit, on_delete=models.CASCADE)
-    round = models.IntegerField()
-    date = models.DateField()
+    round = models.CharField(max_length=100)
 
 class DriverTeam(models.Model):
     season = models.ForeignKey(Season, on_delete=models.CASCADE)
     driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
     constructor = models.ForeignKey(Constructor, on_delete=models.CASCADE)
+    driver_season_number = models.CharField(max_length=100)
 
     class Meta:
         unique_together = (('season', 'driver'),)
 
 class QualifyingResult(models.Model):
-    race = models.ForeignKey(Race, on_delete=models.CASCADE)
+    date = models.ForeignKey(Race, on_delete=models.CASCADE)
     driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
-    position = models.IntegerField()
-    q1 = models.TimeField(null=True, blank=True)
-    q2 = models.TimeField(null=True, blank=True)
-    q3 = models.TimeField(null=True, blank=True)
+    position = models.CharField(max_length=100)
+    q1 = models.CharField(null=True, blank=True, max_length=100)
+    q2 = models.CharField(null=True, blank=True, max_length=100)
+    q3 = models.CharField(null=True, blank=True, max_length=100)
 
     class Meta:
-        unique_together = (('race', 'driver'),)
+        unique_together = (('date', 'driver'),)
 
 class Result(models.Model):
-    race = models.ForeignKey(Race, on_delete=models.CASCADE)
+    date = models.ForeignKey(Race, on_delete=models.CASCADE)
     driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
     constructor = models.ForeignKey(Constructor, on_delete=models.CASCADE)
-    grid = models.IntegerField()
-    position = models.IntegerField()
-    position_text = models.TextField()
-    points = models.FloatField()
-    laps = models.IntegerField()
-    time = models.TextField()
-    status = models.TextField()
+    number = models.CharField(max_length=100)
+    grid = models.CharField(max_length=100)
+    position = models.CharField(max_length=100)
+    position_text = models.CharField(max_length=100)
+    points = models.CharField(max_length=100)
+    laps = models.CharField(max_length=100)
+    time = models.CharField(max_length=100, blank=True)
+    fastest_lap = models.CharField(max_length=100, blank=True)
+    status = models.CharField(max_length=100)
 
     class Meta:
-        unique_together = (('race', 'driver'),)
+        unique_together = (('date', 'driver'),)
 
-class LapTime(models.Model):
-    race = models.ForeignKey(Race, on_delete=models.CASCADE)
+# class LapTime(models.Model):
+#     date = models.ForeignKey(Race, on_delete=models.CASCADE)
+#     driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
+#     lap = models.CharField(max_length=100)
+#     position = models.CharField(max_length=100)
+#     time = models.CharField(max_length=100)
+#     milliseconds = models.IntegerField()
+#
+#     class Meta:
+#         unique_together = (('date', 'driver', 'lap'),)
+
+class Driverstanding(models.Model):
+    season = models.ForeignKey(Season, on_delete=models.CASCADE)
     driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
-    lap = models.IntegerField()
-    position = models.IntegerField()
-    time = models.TextField()
-    milliseconds = models.IntegerField()
+    constructor = models.ForeignKey(Constructor, on_delete=models.CASCADE)
+    position = models.CharField(max_length=100)
+    positionText = models.CharField(max_length=100)
+    points = models.CharField(max_length=100)
+    wins = models.CharField(max_length=100)
 
     class Meta:
-        unique_together = (('race', 'driver', 'lap'),)
+        unique_together = (('season', 'driver'),)
+
+
+class Constructorstanding(models.Model):
+    season = models.ForeignKey(Season, on_delete=models.CASCADE)
+    constructor = models.ForeignKey(Constructor, on_delete=models.CASCADE)
+    position = models.CharField(max_length=100)
+    positionText = models.CharField(max_length=100)
+    points = models.CharField(max_length=100)
+    wins = models.CharField(max_length=100)
+
+    class Meta:
+        unique_together = (('season', 'constructor'),)
+
 
 class User(models.Model):
-    user_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     password_hash = models.CharField(max_length=255)
 
 class Bet(models.Model):
-    bet_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    bet = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    race = models.ForeignKey(Race, on_delete=models.CASCADE)
+    date = models.ForeignKey(Race, on_delete=models.CASCADE)
     driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     odds = models.DecimalField(max_digits=5, decimal_places=2)
