@@ -1,77 +1,54 @@
 @import "tailwindcss";
 
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+
+@font-face {
+  font-family: "Formula1Wide";
+  src: url("./assets/fonts/Formula1-Wide.otf") format("opentype");
+  font-weight: normal;
+  font-style: normal;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+@font-face {
+  font-family: "Formula1Regular";
+  src: url("./assets/fonts/Formula1-Regular.otf") format("opentype");
+  font-weight: normal;
+  font-style: normal;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+@font-face {
+  font-family: "Formula1Bold";
+  src: url("./assets/fonts/Formula1-Bold.otf") format("opentype");
+  font-weight: normal;
+  font-style: normal;
 }
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-}
-
-
 
 /* Add others as needed */
 /* ✨ CSS-first custom theme values */
-:root {
+@theme {
 
 
-  --font-formula1wide: "Formula1Wide", sans-serif;
-  --font-formula1regular: "Formula1Regular", sans-serif;
-  --font-formula1bold: "Formula1Bold", sans-serif;
+  --font-fwide: "Formula1Wide", sans-serif;
+  --font-fregular: "Formula1Regular", sans-serif;
+  --font-fbold: "Formula1Bold", sans-serif;
 
-  /* F1 Brand Colors */
-  --colors-f1-red: #FF1E00;
-  --colors-f1-black: #15151E;
-  --colors-f1-offwhite: #F7F4F1;
-  --colors-f1-white: #FFFFFF;
-  --colors-f1-gray-30: #2C2C34;
-  --colors-f1-gray-50: #5B5B61;
-  --colors-f1-gray-70: #89898E;
-  --colors-f1-gray-90: #B8B8BB;
+  /* F1 Brand color */
+  --color-f1-red: #FF1E00;
+  --color-f1-black: #15151E;
+  --color-f1-offwhite: #F7F4F1;
+  --color-f1-white: #FFFFFF;
+  --color-f1-gray-30: #2C2C34;
+  --color-f1-gray-50: #5B5B61;
+  --color-f1-gray-70: #89898E;
+  --color-f1-gray-90: #B8B8BB;
 
-  /* Team Colors */
-  --colors-team-mercedes: #00D2BE;
-  --colors-team-redbull: #1E41FF;
-  --colors-team-ferrari: #DC0000;
-  --colors-team-mclaren: #FF8700;
-  --colors-team-astonmartin: #006F62;
-  --colors-team-alpine: #0090FF;
-  --colors-team-williams: #005AFF;
-  --colors-team-alfa: #900000;
-  --colors-team-haas: #B6BABD;
+  /* Team color */
+  --color-team-mercedes: #00D2BE;
+  --color-team-redbull: #1E41FF;
+  --color-team-ferrari: #DC0000;
+  --color-team-mclaren: #FF8700;
+  --color-team-astonmartin: #006F62;
+  --color-team-alpine: #0090FF;
+  --color-team-williams: #005AFF;
+  --color-team-alfa: #900000;
+  --color-team-haas: #B6BABD;
 }

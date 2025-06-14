@@ -1,45 +1,83 @@
-import {NavLink} from "react-router-dom";
-import F1Logo from "../assets/logo.svg"; // adjust path to your F1 logo SVG
+import { useState } from 'react';
+import { NavLink } from 'react-router-dom';
+import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import "../App.css";
+import logo from '../assets/logo.svg';
+
+const navRoutes = [
+    { name: 'Standings', path: '/standings' },
+    { name: 'Drivers', path: '/drivers' },
+    { name: 'Comparison', path: '/comparison' },
+    { name: 'Log In', path: '/login' },
+];
 
 const Navbar = () => {
-    const navItems = [
-        {name: "Standings", path: "/standings"},
-        {name: "Drivers", path: "/drivers"},
-        {name: "Comparison", path: "/comparison"},
-        {name: "Comparison", path: "/comparison2"}, // fix duplication if needed
-        {name: "Log In", path: "/login"},
-    ];
+    const [mobileOpen, setMobileOpen] = useState(false);
 
     return (
-        <div className="flex flex-row justify-between bg-f1black "></div>
+        <nav className="bg-f1-black text-f1-white font-fregular py-4 px-6">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                    <img
+                        src={logo}
+                        alt="F1 Logo"
+                        className="h-6"
+                    />
+                    <span className="text-xl font-fbold">Insight</span>
+                </div>
+
+                <div className="hidden md:flex space-x-6 text-smm">
+                    {navRoutes.map((route) => (
+                        <NavLink
+                            key={route.name}
+                            to={route.path}
+                            className={({ isActive }) =>
+                                `px-2 border-b-2 border-r-2 rounded-br-md transition-all duration-300 ease-in-out relative ${
+                                    isActive
+                                        ? 'border-f1-white'
+                                        : 'border-transparent hover:border-f1-white'
+                                }`
+                            }
+                        >
+                            {route.name}
+                        </NavLink>
+                    ))}
+                </div>
+
+                <div className="md:hidden">
+                    <button onClick={() => setMobileOpen(!mobileOpen)}>
+                        {mobileOpen ? <XMarkIcon className="h-6 w-6" /> : <Bars3Icon className="h-6 w-6" />}
+                    </button>
+                </div>
+            </div>
+
+            <div
+                className={`md:hidden transition-all duration-300 ease-in-out overflow-hidden ${
+                    mobileOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                }`}
+            >
+                <ul className="mt-4 space-y-4 text-sm">
+                    {navRoutes.map((route) => (
+                        <li key={`${route.name}-mobile`}>
+                            <NavLink
+                                to={route.path}
+                                onClick={() => setMobileOpen(false)}
+                                className={({ isActive }) =>
+                                    `px-2 border-b-2 border-r-2 rounded-br-md transition-all duration-300 ease-in-out block ${
+                                        isActive
+                                            ? 'border-f1-white'
+                                            : 'border-transparent hover:border-f1-white'
+                                    }`
+                                }
+                            >
+                                {route.name}
+                            </NavLink>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        </nav>
     );
 };
 
 export default Navbar;
-
-
-// <nav className="bg-f1-black text-white px-6 py-4 flex items-center justify-between shadow-md">
-//     {/* Left: Logo + Title */}
-//     <div className="flex items-center gap-3">
-//         <img src={F1Logo} alt="F1 Logo" className="h-6"/>
-//         <span className="text-white font-formula1bold text-xl tracking-wide">Insight</span>
-//     </div>
-//
-//     {/* Right: Navigation links */}
-//     <div className="flex gap-6">
-//         {navItems.map(({name, path}, index) => (
-//             <NavLink
-//                 key={index}
-//                 to={path}
-//                 className={({isActive}) =>
-//                     `relative text-sm tracking-wide transition
-//                ${isActive ?
-//                         "text-white after:absolute after:bottom-[-2px] after:left-0 after:h-[1px] after:w-full after:bg-white after:rounded"
-//                         : "text-gray-300"}`
-//                 }
-//             >
-//                 {name}
-//             </NavLink>
-//         ))}
-//     </div>
-// </nav>

@@ -3,6 +3,7 @@ import Navbar from "./components/Navbar";
 import HomePage from "./pages/Home";
 import StandingsPage from "./pages/Standings";
 import NotFoundPage from "./pages/NotFound.tsx";
+import "./App.css"; // Ensure you have your CSS file for global styles
 
 function App() {
     return (
