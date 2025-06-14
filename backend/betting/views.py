@@ -12,9 +12,7 @@ def create_group(request):
     owner_username = request.data.get('name')
     group_name = request.data.get('group_name')
     created_at = timezone.now()
-    members_usernames = request.data.get('members', [])
-    members_usernames.append(owner_username)
-
+    members_usernames = [owner_username]
     try:
         owner = User.objects.get(username=owner_username)
     except User.DoesNotExist:
