@@ -97,7 +97,7 @@ class Command(BaseCommand):
         upd, created = DataUpdate.objects.get_or_create(name='populate_f1')
 
         if not created and timezone.now() - upd.last_run < timedelta(minutes=30):
-            self.stdout.write('Datenbank wurde erst vor weniger als 10 h aktualisiert – übersprungen.')
+            self.stdout.write('Datenbank wurde erst vor weniger als 30 min aktualisiert – übersprungen.')
             return
 
         self.load_seasons()
