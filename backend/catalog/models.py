@@ -107,19 +107,3 @@ class Constructorstanding(models.Model):
 
     class Meta:
         unique_together = (('season', 'constructor'),)
-
-
-class User(models.Model):
-    user = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=100)
-    email = models.EmailField(unique=True)
-    password_hash = models.CharField(max_length=255)
-
-class Bet(models.Model):
-    bet = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    date = models.ForeignKey(Race, on_delete=models.CASCADE)
-    driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    odds = models.DecimalField(max_digits=5, decimal_places=2)
-    status = models.CharField(max_length=10)  # pending, won, lost
