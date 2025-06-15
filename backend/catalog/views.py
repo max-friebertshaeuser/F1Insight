@@ -10,9 +10,9 @@ from django.http import JsonResponse
 from catalog.models import Season, Circuit, Driver, Constructor, Race, DriverTeam, QualifyingResult, Result, \
     Driverstanding, Constructorstanding, DataUpdate
 import json
-from datetime import date
+from datetime import date, datetime
 from django.http import JsonResponse
-from django.db.models import IntegerField, Sum, Min, FloatField
+from django.db.models import IntegerField, Sum, Min, FloatField, Case, When, Value
 from django.db.models.functions import Cast
 
 
@@ -169,7 +169,69 @@ def detailed_team_view(request):
 
 @api_view(['POST'])
 def get_team_standings(request):
-    return JsonResponse({'message': 'get_team_standings'})
+    team_id = request.data.get('team_id')
+    year = request.data.get('year') or datetime.now().year
+
+    if not team_id:
+        return Response(
+            {"error": "Required fields: team_id, year"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        season = Season.objects.get(season=str(year))
+    except Season.DoesNotExist:
+        return Response(
+            {"error": f"No data for season {year}"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    try:
+        team = Constructor.objects.get(pk=team_id)
+    except Constructor.DoesNotExist:
+        return Response(
+            {"error": f"No team found with id {team_id}"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    driver_teams = DriverTeam.objects.filter(
+        season=season, constructor=team
+    ).select_related('driver')
+    if not driver_teams.exists():
+        return Response(
+            {"error": f"No drivers found for team {team.name} in {year}"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    drivers = [dt.driver for dt in driver_teams]
+
+    standings = []
+    for race in Race.objects.filter(season=season).order_by('date'):
+        qs = (
+            Result.objects
+            .filter(date=race, constructor=team, driver__in=drivers)
+            .select_related('driver')
+            .annotate(
+                pos_int=Case(
+                    When(position__regex=r'^\d+$', then=Cast('position', IntegerField())),
+                    default=Value(9999),
+                    output_field=IntegerField(),
+                )
+            )
+            .order_by('pos_int')
+        )
+        if not qs.exists():
+            continue
+
+        for r in qs:
+            standings.append({
+                "driver": f"{r.driver.forename} {r.driver.surname}",
+                "round": race.round,
+                "position": r.pos_int,
+            })
+
+    return Response({
+        "races": standings
+    })
 
 
 @api_view(['POST'])
