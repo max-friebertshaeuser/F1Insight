@@ -19,9 +19,6 @@ def get_current_drivers(request):
     """
     Returns a list of current drivers with their details.
     """
-
-@api_view(['POST'])
-def detailed_driver_view(request):
     # 1. Aktuelle Saison bestimmen (hier: nach dem Feld 'season' absteigend)
     latest = Season.objects.annotate(as_int=Cast('season', IntegerField())).order_by('-as_int').first()
     current_season = latest.season
@@ -57,9 +54,8 @@ def detailed_driver_view(request):
 
     return JsonResponse({'drivers': drivers_data})
 
-
 @api_view(['POST'])
-def past_driver_results(request):
+def detailed_driver_view(request):
     driver_id = request.data.get('driver_id')
     if not driver_id:
         return JsonResponse(
@@ -69,6 +65,7 @@ def past_driver_results(request):
 
     try:
         driver = Driver.objects.get(pk=driver_id)
+
     except Driver.DoesNotExist:
         return JsonResponse(
             {'error': f'Kein Fahrer mit der ID "{driver_id}" gefunden.'},
@@ -79,95 +76,250 @@ def past_driver_results(request):
     latest = Season.objects.annotate(as_int=Cast('season', IntegerField())).order_by('-as_int').first()
     current_season = latest.season
 
-    # 2. Alle Fahrer iterieren
+    # 2. Karriere-Statistiken
+    career_qs = Result.objects.filter(driver=driver)
+    career_wins = career_qs.filter(position='1').count()
+    career_podiums = career_qs.filter(position__in=['1', '2', '3']).count()
+    career_points = career_qs.aggregate(
+        total=Sum(Cast('points', FloatField()))
+    )['total'] or 0
+    career_poles = QualifyingResult.objects.filter(
+        driver=driver, position='1'
+    ).count()
+    races_entered = career_qs.count()
+    championships = Driverstanding.objects.filter(
+        driver=driver, positionText='1'
+    ).count()
+    # nicht numerische werte wie R rauswerfen und 0 als grid falls nicht angetreten
+    numeric_grids = career_qs.filter(grid__regex=r'^[1-9]\d*$')
+    best_grid = numeric_grids.annotate(
+        grid_int=Cast('grid', IntegerField())
+    ).aggregate(
+        best=Min('grid_int')
+    )['best']
 
+    # 3. Aktuelle Saison-Statistiken
+    #   Team
+    dt = DriverTeam.objects.filter(
+        driver=driver, season=current_season
+    ).select_related('constructor').first()
+    team_name = dt.constructor.name if dt else None
 
-    for driver in drivers:
-        # Karriere-Statistiken
-        career_qs = Result.objects.filter(driver=driver)
-        career_wins = career_qs.filter(position='1').count()
-        career_podiums = career_qs.filter(position__in=['1', '2', '3']).count()
-        career_points = career_qs.aggregate(
-            total=Sum(Cast('points', FloatField()))
-        )['total'] or 0
-        career_poles = QualifyingResult.objects.filter(
-            driver=driver, position='1'
-        ).count()
-        races_entered = career_qs.count()
-        championships = Driverstanding.objects.filter(
-            driver=driver, position='1'
-        ).count()
-        best_grid = career_qs.annotate(
-            grid_int=Cast('grid', IntegerField())
-        ).aggregate(best=Min('grid_int'))['best']
+    #   Fahrerwertung (Punkte, Siege)
+    ds = Driverstanding.objects.filter(
+        driver=driver, season=current_season
+    ).first()
+    current_points = float(ds.points) if ds and ds.points else 0
+    current_wins = int(ds.wins) if ds and ds.wins else 0
 
-        # Aktuelle Saison-Statistiken
-        # Team
-        dt = DriverTeam.objects.filter(
-            driver=driver, season=current_season
-        ).select_related('constructor').first()
-        team_name = dt.constructor.name if dt else None
+    #   Saison-Pole-Positions & Podien
+    current_poles = QualifyingResult.objects.filter(
+        driver=driver,
+        date__season=current_season,
+        position='1'
+    ).count()
+    current_podiums = Result.objects.filter(
+        driver=driver,
+        date__season=current_season,
+        position__in=['1', '2', '3']
+    ).count()
 
-        # Fahrerwertung
-        ds = Driverstanding.objects.filter(
-            driver=driver, season=current_season
-        ).first()
-        current_points = ds.points if ds else 0
-        current_wins = ds.wins if ds else 0
+    # 4. Antwort-Daten zusammenstellen
+    data = {
+        'forename': driver.forename,
+        'surname': driver.surname,
+        'date_of_birth': driver.dob.isoformat(),
+        'place_of_birth': driver.nationality,  # besser: eigenes Feld birth_place
+        'career_wins': career_wins,
+        'career_points': career_points,
+        'career_podiums': career_podiums,
+        'career_poles': career_poles,
+        'grand_prix_entered': races_entered,
+        'world_championships': championships,
+        'best_grid_position': best_grid,
+        'current_team': team_name,
+        'current_season_points': current_points,
+        'current_season_wins': current_wins,
+        'current_season_podiums': current_podiums,
+        'current_season_poles': current_poles,
+    }
 
-        # Aktuelle Saison: Poles & Podiums über die Rennen/Q-Sessions
-        current_poles = QualifyingResult.objects.filter(
-            driver=driver,
-            date__season=current_season,
-            position='1'
-        ).count()
-        current_podiums = Result.objects.filter(
-            driver=driver,
-            date__season=current_season,
-            position__in=['1', '2', '3']
-        ).count()
+    return JsonResponse({'driver': data})
 
-        # 3. In Liste packen
-        drivers_data.append({
-            'forename': driver.forename,
-            'surname': driver.surname,
-            'date_of_birth': driver.dob,
-            'place_of_birth': driver.nationality,
-            'career_wins': career_wins,
-            'career_points': career_points,
-            'career_podiums': career_podiums,
-            'career_poles': career_poles,
-            'current_team': team_name,
-            'current_season_points': current_points,
-            'current_season_wins': current_wins,
-            'current_season_podiums': current_podiums,
-            'current_season_poles': current_poles,
-            'grand_prix_entered': races_entered,
-            'world_championships': championships,
-            'best_grid_position': best_grid,
-        })
-
-    return JsonResponse({'drivers': drivers_data})
 
 @api_view(['POST'])
 def get_driver_box_plot(request):
     return JsonResponse({'message': 'get_driver_box_plot'})
 
+
 @api_view(['POST'])
 def get_driver_standings(request):
-    return JsonResponse({'message': 'get_driver_standings'})
+    driver_id   = request.data.get('driver_id')
+    season_year = request.data.get('season')
+
+    if not driver_id:
+        return JsonResponse({'error': 'driver_id fehlt im Request.'}, status=400)
+
+    # Fahrer laden
+    try:
+        driver = Driver.objects.get(pk=driver_id)
+    except Driver.DoesNotExist:
+        return JsonResponse({'error': 'Fahrer nicht gefunden.'}, status=404)
+
+    # Wenn keine Saison übergeben wurde: neuste Saison ermitteln, in der der Fahrer Rennen hatte
+    if not season_year:
+        seasons = (
+            Result.objects
+            .filter(driver=driver)
+            .values_list('date__season__season', flat=True)
+            .distinct()
+            .order_by('-date__season__season')
+        )
+        season_year = seasons.first()
+        if not season_year:
+            return JsonResponse({'error': 'Keine Renn-Daten für diesen Fahrer.'}, status=404)
+
+    # Nur Ergebnisse dieser Saison laden, casten und ungültige (≤0) ausschließen
+    qs = (
+        Result.objects
+        .filter(driver=driver, date__season__season=season_year)
+        .annotate(
+            grid_int=Cast('grid', IntegerField()),
+            pos_int=Cast('position', IntegerField())
+        )
+        .exclude(grid_int__lte=0)
+        .exclude(pos_int__lte=0)
+        .order_by('date__round')
+    )
+
+    if not qs.exists():
+        return JsonResponse({
+            'error': f'Keine Renn-Daten für {driver_id} in Saison {season_year}.'
+        }, status=404)
+
+    # Rennen-Daten für diese Saison sammeln
+    races = [
+        {
+            'round':  r.date.round,
+            'grid':   r.grid_int,
+            'result': r.pos_int,
+        }
+        for r in qs
+    ]
+
+    return JsonResponse({
+        'races':  races,
+    })
+
 
 @api_view(['POST'])
 def detailed_team_view(request):
-    return JsonResponse({'message': 'detailed_team_view'})
+    team_id = request.data.get('team_id')
+    if not team_id:
+        return JsonResponse({'error': 'Bitte team_id im Request-Body mitgeben.'}, status=400)
+
+    try:
+        team = Constructor.objects.get(pk=team_id)
+    except Constructor.DoesNotExist:
+        return JsonResponse({'error': f'Kein Team mit der ID "{team_id}" gefunden.'}, status=404)
+
+    # 1. Aktuelle Saison ermitteln
+    latest_season_obj = (
+        Season.objects
+        .annotate(as_int=Cast('season', IntegerField()))
+        .order_by('-as_int')
+        .first()
+    )
+    if not latest_season_obj:
+        return JsonResponse({'error': 'Keine Saison-Daten gefunden.'}, status=404)
+
+    # 2. Fahrer des Teams in dieser Saison
+    current_dts = DriverTeam.objects.filter(
+        constructor=team,
+        season=latest_season_obj
+    ).select_related('driver')
+    current_driver_ids = [dt.driver_id for dt in current_dts]
+    current_drivers = [
+        {
+            'id':       dt.driver.driver,
+            'forename': dt.driver.forename,
+            'surname':  dt.driver.surname,
+            'number':   dt.driver_season_number,
+        }
+        for dt in current_dts
+    ]
+
+    # 3. Aktuelle Saison: Punkte & Siege aus Constructorstanding
+    try:
+        cs_current = Constructorstanding.objects.get(
+            constructor=team,
+            season=latest_season_obj
+        )
+        current_points = float(cs_current.points)
+        current_wins   = int(cs_current.wins)
+    except Constructorstanding.DoesNotExist:
+        current_points = 0.0
+        current_wins   = 0
+
+    # 4. Karriere: aufsummierte Punkte & Siege aus Constructorstanding
+    career_cs = Constructorstanding.objects.filter(constructor=team)
+    career_agg = career_cs.aggregate(
+        total_points=Sum(Cast('points', FloatField())),
+        total_wins=  Sum(Cast('wins',   IntegerField()))
+    )
+    career_points = career_agg['total_points'] or 0.0
+    career_wins   = career_agg['total_wins']   or 0
+
+    # 5. Podien & Poles berechnen
+    #    Aktuelle Saison
+    current_results = Result.objects.filter(
+        constructor=team,
+        date__season=latest_season_obj
+    )
+    current_podiums = current_results.filter(position__in=['1','2','3']).count()
+    current_poles   = QualifyingResult.objects.filter(
+        position='1',
+        date__season=latest_season_obj,
+        driver_id__in=current_driver_ids
+    ).count()
+
+    #    Karriere (über alle Saisons)
+    career_results = Result.objects.filter(constructor=team)
+    career_podiums = career_results.filter(position__in=['1','2','3']).count()
+    career_poles   = QualifyingResult.objects.filter(
+        position='1',
+        driver_id__in=DriverTeam.objects
+            .filter(constructor=team)
+            .values_list('driver_id', flat=True)
+            .distinct()
+    ).count()
+
+    # 6. JSON-Antwort
+    return JsonResponse({
+        'team': {
+            'id':          team.constructor,
+            'name':        team.name,
+            'nationality': team.nationality,
+        },
+        'current_season': {
+            'season':  latest_season_obj.season,
+            'drivers': current_drivers,
+            'wins':    current_wins,
+            'points':  current_points,
+            'podiums': current_podiums,
+            'poles':   current_poles,
+        },
+        'career': {
+            'wins':    career_wins,
+            'points':  career_points,
+            'podiums': career_podiums,
+            'poles':   career_poles,
+        }
+    })
 
 @api_view(['POST'])
 def get_team_standings(request):
     return JsonResponse({'message': 'get_team_standings'})
-
-@api_view(['POST'])
-def past_team_results(request):
-    return JsonResponse({'message': 'past_team_results'})
 
 @api_view(['POST'])
 def get_team_box_plot(request):
