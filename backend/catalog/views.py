@@ -7,18 +7,21 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
-from catalog.models import Season, Circuit, Driver, Constructor, Race, DriverTeam, QualifyingResult, Result, Driverstanding, Constructorstanding, DataUpdate
+from catalog.models import Season, Circuit, Driver, Constructor, Race, DriverTeam, QualifyingResult, Result, \
+    Driverstanding, Constructorstanding, DataUpdate
 import json
 from datetime import date
 from django.http import JsonResponse
 from django.db.models import IntegerField, Sum, Min, FloatField
 from django.db.models.functions import Cast
 
+
 @api_view(['POST'])
 def get_current_drivers(request):
     """
     Returns a list of current drivers with their details.
     """
+
 
 @api_view(['POST'])
 def detailed_driver_view(request):
@@ -80,7 +83,6 @@ def past_driver_results(request):
     current_season = latest.season
 
     # 2. Alle Fahrer iterieren
-
 
     for driver in drivers:
         # Karriere-Statistiken
@@ -149,29 +151,36 @@ def past_driver_results(request):
 
     return JsonResponse({'drivers': drivers_data})
 
+
 @api_view(['POST'])
 def get_driver_box_plot(request):
     return JsonResponse({'message': 'get_driver_box_plot'})
+
 
 @api_view(['POST'])
 def get_driver_standings(request):
     return JsonResponse({'message': 'get_driver_standings'})
 
+
 @api_view(['POST'])
 def detailed_team_view(request):
     return JsonResponse({'message': 'detailed_team_view'})
+
 
 @api_view(['POST'])
 def get_team_standings(request):
     return JsonResponse({'message': 'get_team_standings'})
 
+
 @api_view(['POST'])
 def past_team_results(request):
     return JsonResponse({'message': 'past_team_results'})
 
+
 @api_view(['POST'])
 def get_team_box_plot(request):
     return JsonResponse({'message': 'get_team_box_plot'})
+
 
 @api_view(['POST'])
 def insight_driver_standings(request):
@@ -195,11 +204,12 @@ def insight_driver_standings(request):
             "driver": f"{s.driver.forename} {s.driver.surname}",
             "nationality": s.driver.nationality,
             "team": s.constructor.name,
-            "position": s.position,
+            "position": s.positionText,
             "points": s.points,
         })
-
+        data.sort(key=lambda x: int(x["position"]) if x["position"].isdigit() else 9999)
     return Response(data)
+
 
 @api_view(['POST'])
 def insight_team_standings(request):
@@ -223,8 +233,9 @@ def insight_team_standings(request):
     for s in qs:
         data.append({
             "team": s.constructor.name,
-            "position": s.position,
+            "position": s.positionText,
             "points": s.points,
         })
+        data.sort(key=lambda x: int(x["position"]) if x["position"].isdigit() else 9999)
 
     return Response(data)
