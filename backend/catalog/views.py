@@ -7,12 +7,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
-from catalog.models import Season, Circuit, Driver, Constructor, Race, DriverTeam, QualifyingResult, Result, Driverstanding, Constructorstanding, DataUpdate
+from catalog.models import Season, Circuit, Driver, Constructor, Race, DriverTeam, QualifyingResult, Result, \
+    Driverstanding, Constructorstanding, DataUpdate
 import json
-from datetime import date
+from datetime import date, datetime
 from django.http import JsonResponse
-from django.db.models import IntegerField, Sum, Min, FloatField
+from django.db.models import IntegerField, Sum, Min, FloatField, Case, When, Value
 from django.db.models.functions import Cast
+
 
 @api_view(['POST'])
 def get_current_drivers(request):
@@ -147,6 +149,7 @@ def detailed_driver_view(request):
     return JsonResponse({'driver': data})
 
 
+#TODO: Implement past_team_results function
 @api_view(['POST'])
 def get_driver_box_plot(request):
     return JsonResponse({'message': 'get_driver_box_plot'})
@@ -210,6 +213,7 @@ def get_driver_standings(request):
     return JsonResponse({
         'races':  races,
     })
+
 
 
 @api_view(['POST'])
@@ -317,13 +321,78 @@ def detailed_team_view(request):
         }
     })
 
+
 @api_view(['POST'])
 def get_team_standings(request):
-    return JsonResponse({'message': 'get_team_standings'})
+    team_id = request.data.get('team_id')
+    year = request.data.get('year') or datetime.now().year
 
+    if not team_id:
+        return Response(
+            {"error": "Required fields: team_id, year"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        season = Season.objects.get(season=str(year))
+    except Season.DoesNotExist:
+        return Response(
+            {"error": f"No data for season {year}"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    try:
+        team = Constructor.objects.get(pk=team_id)
+    except Constructor.DoesNotExist:
+        return Response(
+            {"error": f"No team found with id {team_id}"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    driver_teams = DriverTeam.objects.filter(
+        season=season, constructor=team
+    ).select_related('driver')
+    if not driver_teams.exists():
+        return Response(
+            {"error": f"No drivers found for team {team.name} in {year}"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    drivers = [dt.driver for dt in driver_teams]
+
+    standings = []
+    for race in Race.objects.filter(season=season).order_by('date'):
+        qs = (
+            Result.objects
+            .filter(date=race, constructor=team, driver__in=drivers)
+            .select_related('driver')
+            .annotate(
+                pos_int=Case(
+                    When(position__regex=r'^\d+$', then=Cast('position', IntegerField())),
+                    default=Value(9999),
+                    output_field=IntegerField(),
+                )
+            )
+            .order_by('pos_int')
+        )
+        if not qs.exists():
+            continue
+
+        for r in qs:
+            standings.append({
+                "driver": f"{r.driver.forename} {r.driver.surname}",
+                "round": race.round,
+                "position": r.pos_int,
+            })
+
+    return Response({
+        "races": standings
+    })
+
+#TODO: Implement past_team_results function
 @api_view(['POST'])
 def get_team_box_plot(request):
     return JsonResponse({'message': 'get_team_box_plot'})
+
 
 @api_view(['POST'])
 def insight_driver_standings(request):
@@ -347,11 +416,12 @@ def insight_driver_standings(request):
             "driver": f"{s.driver.forename} {s.driver.surname}",
             "nationality": s.driver.nationality,
             "team": s.constructor.name,
-            "position": s.position,
+            "position": s.positionText,
             "points": s.points,
         })
-
+        data.sort(key=lambda x: int(x["position"]) if x["position"].isdigit() else 9999)
     return Response(data)
+
 
 @api_view(['POST'])
 def insight_team_standings(request):
@@ -375,8 +445,9 @@ def insight_team_standings(request):
     for s in qs:
         data.append({
             "team": s.constructor.name,
-            "position": s.position,
+            "position": s.positionText,
             "points": s.points,
         })
+        data.sort(key=lambda x: int(x["position"]) if x["position"].isdigit() else 9999)
 
     return Response(data)
