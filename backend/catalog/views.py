@@ -14,8 +14,17 @@ from datetime import date, datetime
 from django.http import JsonResponse
 from django.db.models import IntegerField, Sum, Min, FloatField, Case, When, Value
 from django.db.models.functions import Cast
+from drf_yasg.utils   import swagger_auto_schema
+from drf_yasg import openapi
+from rest_framework.decorators import api_view
+from django.http      import JsonResponse
 
-
+@swagger_auto_schema(
+    method='post',
+    operation_summary="Aktuelle Fahrer abrufen",
+    operation_description="Gibt eine Liste der Fahrer der aktuellen Saison zurück.",
+    responses={200: openapi.Response('Liste der Fahrer')}
+)
 @api_view(['POST'])
 def get_current_drivers(request):
     """
@@ -56,6 +65,21 @@ def get_current_drivers(request):
 
     return JsonResponse({'drivers': drivers_data})
 
+@swagger_auto_schema(
+    method='post',
+    operation_summary="Detaillierte Fahrerdaten",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'driver_id': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='Eindeutige Fahrer-ID, z.B. "max_verstappen"'
+            ),
+        },
+        required=['driver_id'],  # nur driver_id zwingend
+    ),
+    responses={200: openapi.Response('Liste der Fahrer')}
+)
 @api_view(['POST'])
 def detailed_driver_view(request):
     driver_id = request.data.get('driver_id')
@@ -150,11 +174,49 @@ def detailed_driver_view(request):
 
 
 #TODO: Implement past_team_results function
+@swagger_auto_schema(
+    method='post',
+    operation_summary="Box-Plot für Fahrer",
+    operation_description="(noch nicht implementiert)",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'driver_id': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='Fahrer-, z.B. max_verstappen'
+            ),
+        },
+        required=['driver_id'],
+    ),
+    responses={200: openapi.Response('Platzhalter')}
+)
 @api_view(['POST'])
 def get_driver_box_plot(request):
     return JsonResponse({'message': 'get_driver_box_plot'})
 
-
+@swagger_auto_schema(
+    method='post',
+    operation_summary="Renn-Ergebnisse eines Fahrers",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'driver_id': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='Fahrer-, z.B. max_verstappen'
+            ),
+            'season': openapi.Schema(
+                type=openapi.TYPE_INTEGER,
+                description='Jahreszahl der Saison (optional), z.B.: 2024'
+            ),
+        },
+        required=['driver_id'],
+    ),
+    responses={
+        200: openapi.Response('Liste der Rennen und Positionen'),
+        400: openapi.Response('Bad Request'),
+        404: openapi.Response('Keine Daten gefunden'),
+    }
+)
 @api_view(['POST'])
 def get_driver_standings(request):
     driver_id   = request.data.get('driver_id')
@@ -215,7 +277,25 @@ def get_driver_standings(request):
     })
 
 
-
+@swagger_auto_schema(
+    method='post',
+    operation_summary="Detaillierte Team-Daten",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'team_id': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='Team-ID (Constructor) z.B. red_bull'
+            ),
+        },
+        required=['team_id'],
+    ),
+    responses={
+        200: openapi.Response('Team-Details'),
+        400: openapi.Response('Bad Request'),
+        404: openapi.Response('Team nicht gefunden'),
+    }
+)
 @api_view(['POST'])
 def detailed_team_view(request):
     team_id = request.data.get('team_id')
@@ -321,7 +401,23 @@ def detailed_team_view(request):
         }
     })
 
-
+@swagger_auto_schema(
+    method='post',
+    operation_summary="Renn-Ergebnisse eines Teams",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'team_id': openapi.Schema(type=openapi.TYPE_STRING, description='Team-ID z.B.: red_bull'),
+            'year':    openapi.Schema(type=openapi.TYPE_INTEGER, description='Saison-Jahr (optional) z.B.: 2024'),
+        },
+        required=['team_id'],
+    ),
+    responses={
+        200: openapi.Response('Liste der Team-Ergebnisse'),
+        400: openapi.Response('Bad Request'),
+        404: openapi.Response('Keine Daten gefunden'),
+    }
+)
 @api_view(['POST'])
 def get_team_standings(request):
     team_id = request.data.get('team_id')
@@ -388,12 +484,43 @@ def get_team_standings(request):
         "races": standings
     })
 
+@swagger_auto_schema(
+    method='post',
+    operation_summary="Box-Plot für Team",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'team_id': openapi.Schema(type=openapi.TYPE_STRING, description='Team-ID z.B.: red_bull'),
+        },
+        required=['team_id'],
+    ),
+    responses={200: openapi.Response('Platzhalter')}
+)
+@api_view(['POST'])
 #TODO: Implement past_team_results function
 @api_view(['POST'])
 def get_team_box_plot(request):
     return JsonResponse({'message': 'get_team_box_plot'})
 
-
+@swagger_auto_schema(
+    method='post',
+    operation_summary="Fahrer-WM-Stand",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'year': openapi.Schema(
+                type=openapi.TYPE_INTEGER,
+                description='Jahreszahl der Saison z.B.: 2024'
+            ),
+        },
+        required=['year'],
+    ),
+    responses={
+        200: openapi.Response('Fahrer-WM-Stand'),
+        400: openapi.Response('Bad Request'),
+        404: openapi.Response('Keine Daten für Saison'),
+    }
+)
 @api_view(['POST'])
 def insight_driver_standings(request):
     year = request.data.get('year')
@@ -423,6 +550,22 @@ def insight_driver_standings(request):
     return Response(data)
 
 
+@swagger_auto_schema(
+    method='post',
+    operation_summary="Team-WM-Stand",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'year': openapi.Schema(type=openapi.TYPE_INTEGER, description='Jahreszahl der Saison z.B.: 2024'),
+        },
+        required=['year'],
+    ),
+    responses={
+        200: openapi.Response('Team-WM-Stand'),
+        400: openapi.Response('Bad Request'),
+        404: openapi.Response('Keine Daten für Saison'),
+    }
+)
 @api_view(['POST'])
 def insight_team_standings(request):
     year = request.data.get('year')
