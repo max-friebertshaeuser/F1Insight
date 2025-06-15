@@ -151,7 +151,7 @@ def past_driver_results(request):
 
     return JsonResponse({'drivers': drivers_data})
 
-
+#TODO: Implement past_team_results function
 @api_view(['POST'])
 def get_driver_box_plot(request):
     return JsonResponse({'message': 'get_driver_box_plot'})
@@ -233,12 +233,7 @@ def get_team_standings(request):
         "races": standings
     })
 
-
-@api_view(['POST'])
-def past_team_results(request):
-    return JsonResponse({'message': 'past_team_results'})
-
-
+#TODO: Implement past_team_results function
 @api_view(['POST'])
 def get_team_box_plot(request):
     return JsonResponse({'message': 'get_team_box_plot'})
