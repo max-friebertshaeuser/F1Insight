@@ -222,7 +222,7 @@ def get_last_5_drivers_before(request, season, driver_id):
     return JsonResponse(data, safe=False)
 
 
-@permission_classes([IsAuthenticated])
+
 @api_view(["GET"])
 def get_last_5_drivers(request, season, driver_id):
     try:
