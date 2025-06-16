@@ -1,15 +1,16 @@
 from django.utils import timezone
 from django.contrib.auth.models import User
 from drf_yasg.utils import swagger_auto_schema
+from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from drf_yasg import openapi
 
-from .models import Group, Bet, BetStat
+from .models import Group, Bet, BetStat, BetTop3
 from catalog.models import Race, Driver, Driverstanding, Season
 import json
-from datetime import date
+from datetime import date, datetime
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 
@@ -221,6 +222,7 @@ def show_all_races_to_bet(request):
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
+            "Bsp": '{"group": 1,"race": "2025-12-07","bet_top_3": ["norris", "max_verstappen", "lawson"],"bet_last_5": "ocon","bet_last_10": "ocon","bet_fastest_lap": "max_verstappen"}',
             "race": openapi.Schema(type=openapi.TYPE_STRING, description="Race date (ID)"),
             "group": openapi.Schema(type=openapi.TYPE_INTEGER, description="Group ID"),
             "bet_top_3": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING),
@@ -247,55 +249,86 @@ def set_bet(request):
     user = request.user
     data = request.data
 
-    race_id = data.get("race")
-    group_id = data.get("group")
-
-    if not race_id or not group_id:
-        return JsonResponse({"error": "Missing race or group field."}, status=400)
-
-    try:
-        race = Race.objects.get(date=race_id)
-        group = Group.objects.get(id=group_id)
-    except Race.DoesNotExist:
-        return JsonResponse({"error": "Race not found."}, status=404)
-    except Group.DoesNotExist:
-        return JsonResponse({"error": "Group not found."}, status=404)
-
-    if Bet.objects.filter(user=user, race=race).exists():
-        return JsonResponse({"error": "You have already placed a bet for this race."}, status=400)
-
-    try:
-        bet = Bet.objects.create(
-            user=user,
-            group=group,
-            race=race,
-            bet_last_5=Driver.objects.filter(driver=data.get("bet_last_5")).first(),
-            bet_last_10=Driver.objects.filter(driver=data.get("bet_last_10")).first(),
-            bet_fastest_lap=Driver.objects.filter(driver=data.get("bet_fastest_lap")).first(),
+    # 1) Pflichtdaten prüfen
+    race_str  = data.get("race")
+    group_id  = data.get("group")
+    if not race_str or not group_id:
+        return JsonResponse(
+            {"error": "Missing race or group field."},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
-        bet_top_3_ids = data.get("bet_top_3", [])
-        if bet_top_3_ids:
-            top3_drivers = Driver.objects.filter(driver__in=bet_top_3_ids)
-            bet.bet_top_3.set(top3_drivers)
+    # 2) Race & Group laden
+    try:
+        race = Race.objects.get(date=datetime.strptime(race_str, "%Y-%m-%d").date())
+    except (ValueError, Race.DoesNotExist):
+        return JsonResponse({"error": "Race not found or invalid date."},
+                            status=status.HTTP_404_NOT_FOUND)
 
-        return JsonResponse({
-            "message": "Bet created successfully",
-            "bet": {
-                "id": bet.id,
-                "user": user.username,
-                "group": group.id,
-                "race": str(race.date),
-                "bet_top_3": list(bet.bet_top_3.values_list("driver", flat=True)),
-                "bet_last_5": bet.bet_last_5.driver if bet.bet_last_5 else None,
-                "bet_last_10": bet.bet_last_10.driver if bet.bet_last_10 else None,
-                "bet_fastest_lap": bet.bet_fastest_lap.driver if bet.bet_fastest_lap else None,
-                "bet_date": bet.bet_date.isoformat(),
-            }
-        }, status=201)
+    try:
+        group = Group.objects.get(id=group_id)
+    except Group.DoesNotExist:
+        return JsonResponse({"error": "Group not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+    # 3) Keine Doppel-Wetten
+    if Bet.objects.filter(user=user, race=race).exists():
+        return JsonResponse(
+            {"error": "You have already placed a bet for this race."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # 4) Hilfsfunktion zum Fahrer-Lookup
+    def get_driver(code):
+        if not code:
+            return None
+        return Driver.objects.filter(driver__iexact=code).first()
+
+    # 5) Bet anlegen (ohne Top-3)
+    bet = Bet.objects.create(
+        user           = user,
+        group          = group,
+        race           = race,
+        bet_last_5     = get_driver(data.get("bet_last_5")),
+        bet_last_10    = get_driver(data.get("bet_last_10")),
+        bet_fastest_lap= get_driver(data.get("bet_fastest_lap")),
+    )
+
+    # 6) Top-3 über Through-Model anlegen
+    top3_codes = data.get("bet_top_3", [])
+    not_found = []
+    for idx, code in enumerate(top3_codes, start=1):
+        driver = get_driver(code)
+        if not driver:
+            not_found.append(code)
+        else:
+            BetTop3.objects.create(bet=bet, driver=driver, position=idx)
+
+    if not_found:
+        # Rollback Top3 if einige ungültig waren
+        BetTop3.objects.filter(bet=bet).delete()
+        bet.delete()
+        return JsonResponse(
+            {"error": f"Drivers not found for bet_top_3: {not_found}"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # 7) Alles gespeichert – Antwort mit exakter Reihenfolge
+    ordered_top3 = [bt3.driver.driver for bt3 in bet.bettop3_set.all()]
+
+    return JsonResponse({
+        "message": "Bet created successfully",
+        "bet": {
+            "id":              bet.id,
+            "user":            user.username,
+            "group":           group.id,
+            "race":            race_str,
+            "bet_top_3":       ordered_top3,
+            "bet_last_5":      bet.bet_last_5.driver         if bet.bet_last_5 else None,
+            "bet_last_10":     bet.bet_last_10.driver        if bet.bet_last_10 else None,
+            "bet_fastest_lap": bet.bet_fastest_lap.driver    if bet.bet_fastest_lap else None,
+            "bet_date":        bet.bet_date.isoformat(),
+        }
+    }, status=status.HTTP_201_CREATED)
 
 @swagger_auto_schema(
     method='get',
@@ -329,20 +362,46 @@ def set_bet(request):
 @api_view(["GET"])
 def show_bet(request, race_id):
     user = request.user
+
+    # 1) Datum parsen und Race lookup
     try:
-        race = Race.objects.get(date=race_id)
+        dt = datetime.strptime(race_id, "%Y-%m-%d").date()
+        race = Race.objects.get(date=dt)
+    except ValueError:
+        return JsonResponse(
+            {"error": "Invalid date format, expected YYYY-MM-DD."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Race.DoesNotExist:
+        return JsonResponse(
+            {"error": f"Race {race_id} not found."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # 2) Bet holen
+    try:
         bet = Bet.objects.get(user=user, race=race)
-
-        return JsonResponse({
-            "race": str(bet.race.date),
-            "bet_top_3": bet.bet_top_3,
-            "bet_last_5": bet.bet_last_5,
-            "bet_last_10": bet.bet_last_10,
-            "bet_fastest_lap": bet.bet_fastest_lap.driver if bet.bet_fastest_lap else None,
-        })
-
     except Bet.DoesNotExist:
-        return JsonResponse({"error": "No bet found for this race."}, status=404)
+        return JsonResponse(
+            {"error": "No bet found for this race."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # 3) Top-3 aus dem Through-Model auslesen (Meta.ordering = ['position'])
+    top3_ids = [bt3.driver.driver for bt3 in BetTop3.objects.filter(bet=bet)]
+
+    # 4) FK-Felder serialisieren
+    last5_id   = bet.bet_last_5.driver      if bet.bet_last_5      else None
+    last10_id  = bet.bet_last_10.driver     if bet.bet_last_10     else None
+    fastest_id = bet.bet_fastest_lap.driver if bet.bet_fastest_lap else None
+
+    return JsonResponse({
+        "race":            race_id,
+        "bet_top_3":       top3_ids,
+        "bet_last_5":      last5_id,
+        "bet_last_10":     last10_id,
+        "bet_fastest_lap": fastest_id,
+    })
 
 @swagger_auto_schema(
     method='delete',
@@ -365,13 +424,39 @@ def show_bet(request, race_id):
 @api_view(["DELETE"])
 def delete_bet(request, race_id):
     user = request.user
+
+    # 1) Datum parsen
     try:
-        race = Race.objects.get(date=race_id)
+        race_date = datetime.strptime(race_id, "%Y-%m-%d").date()
+    except ValueError:
+        return JsonResponse(
+            {"error": "Invalid date format, expected YYYY-MM-DD."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # 2) Race lookup
+    try:
+        race = Race.objects.get(date=race_date)
+    except Race.DoesNotExist:
+        return JsonResponse(
+            {"error": f"Race {race_id} not found."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # 3) Bet lookup & delete
+    try:
         bet = Bet.objects.get(user=user, race=race)
-        bet.delete()
-        return JsonResponse({"message": "Bet deleted successfully."})
     except Bet.DoesNotExist:
-        return JsonResponse({"error": "Bet not found."}, status=404)
+        return JsonResponse(
+            {"error": "Bet not found."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    bet.delete()
+    return JsonResponse(
+        {"message": "Bet deleted successfully."},
+        status=status.HTTP_200_OK
+    )
 
 
 @swagger_auto_schema(
@@ -399,20 +484,105 @@ def delete_bet(request, race_id):
 @api_view(["PUT"])
 def update_bet(request, race_id):
     user = request.user
-    data = json.loads(request.body)
+    data = request.data
+
+    # 1) Pflichtfelder prüfen
+    race_str = data.get("race")
+    group_id = data.get("group")
+    if not race_str or not group_id:
+        return JsonResponse(
+            {"error": "Missing required field: 'race' or 'group'."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # 2) Rennen parsen und laden
     try:
-        race = Race.objects.get(date=race_id)
+        race_date = datetime.strptime(race_id, "%Y-%m-%d").date()
+        race = Race.objects.get(date=race_date)
+    except ValueError:
+        return JsonResponse(
+            {"error": "Invalid date format, expected YYYY-MM-DD."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Race.DoesNotExist:
+        return JsonResponse(
+            {"error": f"Race {race_id} not found."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # 3) Existierende Wette laden
+    try:
         bet = Bet.objects.get(user=user, race=race)
-
-        bet.bet_top_3 = data.get("bet_top_3", bet.bet_top_3)
-        bet.bet_last_5 = data.get("bet_last_5", bet.bet_last_5)
-        bet.bet_last_10 = data.get("bet_last_10", bet.bet_last_10)
-        bet.bet_fastest_lap_id = data.get("bet_fastest_lap", bet.bet_fastest_lap_id)
-        bet.save()
-
-        return JsonResponse({"message": "Bet updated successfully."})
     except Bet.DoesNotExist:
-        return JsonResponse({"error": "No bet found for this race."}, status=404)
+        return JsonResponse(
+            {"error": "No existing bet for this race."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # 4) Gruppe updaten
+    try:
+        bet.group = Group.objects.get(id=group_id)
+    except Group.DoesNotExist:
+        return JsonResponse(
+            {"error": f"Group {group_id} not found."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # 5) Fahrer‐Lookup‐Helper
+    def get_driver(code):
+        if not code:
+            return None
+        return Driver.objects.filter(driver__iexact=code).first()
+
+    # 6) FK‐Felder updaten
+    if "bet_last_5" in data:
+        bet.bet_last_5 = get_driver(data["bet_last_5"])
+    if "bet_last_10" in data:
+        bet.bet_last_10 = get_driver(data["bet_last_10"])
+    if "bet_fastest_lap" in data:
+        bet.bet_fastest_lap = get_driver(data["bet_fastest_lap"])
+
+    # 7) Erst speichern, dann die Top-3 via through-Model setzen
+    bet.save()
+
+    top3_codes = data.get("bet_top_3")
+    if top3_codes is not None:
+        # Lösche vorhandene Einträge
+        BetTop3.objects.filter(bet=bet).delete()
+
+        not_found = []
+        for idx, code in enumerate(top3_codes, start=1):
+            driver = get_driver(code)
+            if not driver:
+                not_found.append(code)
+            else:
+                BetTop3.objects.create(bet=bet, driver=driver, position=idx)
+
+        if not_found:
+            # Rollback bei ungültigen Codes
+            BetTop3.objects.filter(bet=bet).delete()
+            return JsonResponse(
+                {"error": f"Drivers not found for bet_top_3: {not_found}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    # 8) Response: Top-3 in stored order (via BetTop3.Meta.ordering)
+    ordered_top3 = [bt3.driver.driver for bt3 in BetTop3.objects.filter(bet=bet)]
+
+    return JsonResponse({
+        "message": "Bet updated successfully",
+        "bet": {
+            "id":              bet.id,
+            "user":            user.username,
+            "group":           bet.group.id,
+            "race":            race_id,
+            "bet_top_3":       ordered_top3,
+            "bet_last_5":      bet.bet_last_5.driver        if bet.bet_last_5 else None,
+            "bet_last_10":     bet.bet_last_10.driver       if bet.bet_last_10 else None,
+            "bet_fastest_lap": bet.bet_fastest_lap.driver   if bet.bet_fastest_lap else None,
+            "bet_date":        bet.bet_date.isoformat(),
+        }
+    }, status=status.HTTP_200_OK)
 
 
 @swagger_auto_schema(
