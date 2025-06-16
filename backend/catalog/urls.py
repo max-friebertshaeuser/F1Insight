@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
 
+    path('init', views.get_init, name='get_init'),
 
     path('getcurrentdrivers', views.get_current_drivers, name='get_current_drivers'),
 

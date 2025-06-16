@@ -20,6 +20,67 @@ from rest_framework.decorators import api_view
 from django.http      import JsonResponse
 from math import floor, ceil
 
+
+@swagger_auto_schema(
+    method='post',
+    operation_summary="Initialdaten abrufen",
+    operation_description="Gibt Mappings der Fahrernamen und Teamnamen zu ihren IDs zurück, damit das Frontend die Eingaben zuordnen kann.",
+    responses={
+        200: openapi.Response(
+            description="Mapping-Objekte für Fahrer und Teams",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    "drivers": openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        description="Mapping von Vollnamen zu driver_id",
+                        additional_properties=openapi.Schema(
+                            type=openapi.TYPE_STRING,
+                            description="driver_id"
+                        )
+                    ),
+                    "teams": openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        description="Mapping von Teamnamen zu team_id",
+                        additional_properties=openapi.Schema(
+                            type=openapi.TYPE_STRING,
+                            description="team_id"
+                        )
+                    ),
+                }
+            )
+        ),
+        400: openapi.Response(description="Fehlerhafte Anfrage"),
+    }
+)
+@api_view(['POST'])
+def get_init(request):
+    """
+    Liefert die Mapping-Tabellen für Frontend-Initialisierung:
+    - drivers: { "Vorname Nachname": "driver_id", … }
+    - teams:   { "Team Name":       "team_id",   … }
+    """
+    # Fahrer-Mapping
+    driver_qs = Driver.objects.all().order_by('surname', 'forename')
+    drivers = {
+        f"{d.forename} {d.surname}": d.driver
+        for d in driver_qs
+    }
+
+    # Team-Mapping
+    team_qs = Constructor.objects.all().order_by('name')
+    teams = {
+        c.name: c.constructor
+        for c in team_qs
+    }
+
+    return JsonResponse({
+        "drivers": drivers,
+        "teams": teams,
+    })
+
+
+
 @swagger_auto_schema(
     method='post',
     operation_summary="Aktuelle Fahrer abrufen",
