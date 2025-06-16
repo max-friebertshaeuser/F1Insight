@@ -86,7 +86,6 @@ def join_group(request):
     return Response({'status': 'joined group successfully'})
 
 
-
 @swagger_auto_schema(
     method='post',
     operation_summary="leave a betting group",
@@ -116,7 +115,6 @@ def leave_group(request):
         BetStat.objects.filter(user=request.user, group=group).delete()
     except BetStat.DoesNotExist:
         return Response({'status': 'user is not in any group'}, status=400)
-
 
     return Response({'status': 'left group successfully'})
 
@@ -188,6 +186,7 @@ def remove_group(request):
     except Group.DoesNotExist:
         return Response({'status': 'group not found'}, status=404)
 
+
 @swagger_auto_schema(
     method='get',
     operation_summary="List all upcoming races available for betting",
@@ -215,6 +214,7 @@ def show_all_races_to_bet(request):
     race_data = [{"id": r.date, "season": r.season.season, "circuit": r.circuit.name, "date": r.date} for r in races]
     return JsonResponse(race_data, safe=False)
 
+
 @swagger_auto_schema(
     method='post',
     operation_summary="Create a new bet for a race",
@@ -223,9 +223,12 @@ def show_all_races_to_bet(request):
         properties={
             "race": openapi.Schema(type=openapi.TYPE_STRING, description="Race date (ID)"),
             "group": openapi.Schema(type=openapi.TYPE_INTEGER, description="Group ID"),
-            "bet_top_3": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description="Top 3 drivers bet"),
-            "bet_last_5": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description="Last 5 drivers bet"),
-            "bet_last_10": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description="Last 10 drivers bet"),
+            "bet_top_3": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING),
+                                        description="Top 3 drivers bet"),
+            "bet_last_5": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING),
+                                         description="Last 5 drivers bet"),
+            "bet_last_10": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING),
+                                          description="Last 10 drivers bet"),
             "bet_fastest_lap": openapi.Schema(type=openapi.TYPE_STRING, description="Driver ID for fastest lap"),
             "safety_car": openapi.Schema(type=openapi.TYPE_BOOLEAN, description="Safety car bet"),
         },
@@ -238,32 +241,59 @@ def show_all_races_to_bet(request):
         500: openapi.Response("Server error"),
     }
 )
-@permission_classes([IsAuthenticated])
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 def set_bet(request):
     user = request.user
-    data = json.loads(request.body)
+    data = request.data
+
+    race_id = data.get("race")
+    group_id = data.get("group")
+
+    if not race_id or not group_id:
+        return JsonResponse({"error": "Missing race or group field."}, status=400)
 
     try:
-        race_id = data["race"]
         race = Race.objects.get(date=race_id)
-
-        if Bet.objects.filter(user=user, race=race).exists():
-            return JsonResponse({"error": "You have already placed a bet for this race."}, status=400)
-
-        bet = Bet.objects.create(
-            user=user,
-            group_id=data["group"],
-            race=race,
-            bet_top_3=data.get("bet_top_3", []),
-            bet_last_5=data.get("bet_last_5", []),
-            bet_last_10=data.get("bet_last_10", []),
-            bet_fastest_lap_id=data.get("bet_fastest_lap"),
-        )
-        return JsonResponse({"message": "Bet created successfully", "bet_id": bet.id})
-
+        group = Group.objects.get(id=group_id)
     except Race.DoesNotExist:
         return JsonResponse({"error": "Race not found."}, status=404)
+    except Group.DoesNotExist:
+        return JsonResponse({"error": "Group not found."}, status=404)
+
+    if Bet.objects.filter(user=user, race=race).exists():
+        return JsonResponse({"error": "You have already placed a bet for this race."}, status=400)
+
+    try:
+        bet = Bet.objects.create(
+            user=user,
+            group=group,
+            race=race,
+            bet_last_5=Driver.objects.filter(driver=data.get("bet_last_5")).first(),
+            bet_last_10=Driver.objects.filter(driver=data.get("bet_last_10")).first(),
+            bet_fastest_lap=Driver.objects.filter(driver=data.get("bet_fastest_lap")).first(),
+        )
+
+        bet_top_3_ids = data.get("bet_top_3", [])
+        if bet_top_3_ids:
+            top3_drivers = Driver.objects.filter(driver__in=bet_top_3_ids)
+            bet.bet_top_3.set(top3_drivers)
+
+        return JsonResponse({
+            "message": "Bet created successfully",
+            "bet": {
+                "id": bet.id,
+                "user": user.username,
+                "group": group.id,
+                "race": str(race.date),
+                "bet_top_3": list(bet.bet_top_3.values_list("driver", flat=True)),
+                "bet_last_5": bet.bet_last_5.driver if bet.bet_last_5 else None,
+                "bet_last_10": bet.bet_last_10.driver if bet.bet_last_10 else None,
+                "bet_fastest_lap": bet.bet_fastest_lap.driver if bet.bet_fastest_lap else None,
+                "bet_date": bet.bet_date.isoformat(),
+            }
+        }, status=201)
+
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
@@ -343,15 +373,19 @@ def delete_bet(request, race_id):
     except Bet.DoesNotExist:
         return JsonResponse({"error": "Bet not found."}, status=404)
 
+
 @swagger_auto_schema(
     method='put',
     operation_summary="Update a bet for a specific race",
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
-            "bet_top_3": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description="Top 3 drivers bet"),
-            "bet_last_5": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description="Last 5 drivers bet"),
-            "bet_last_10": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description="Last 10 drivers bet"),
+            "bet_top_3": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING),
+                                        description="Top 3 drivers bet"),
+            "bet_last_5": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING),
+                                         description="Last 5 drivers bet"),
+            "bet_last_10": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING),
+                                          description="Last 10 drivers bet"),
             "bet_fastest_lap": openapi.Schema(type=openapi.TYPE_STRING, description="Driver ID for fastest lap"),
         },
         required=[],
@@ -379,6 +413,7 @@ def update_bet(request, race_id):
         return JsonResponse({"message": "Bet updated successfully."})
     except Bet.DoesNotExist:
         return JsonResponse({"error": "No bet found for this race."}, status=404)
+
 
 @swagger_auto_schema(
     method='get',
@@ -448,6 +483,7 @@ def get_last_5_drivers_before(request, season, driver_id):
         for ds in drivers
     ]
     return JsonResponse(data, safe=False)
+
 
 @swagger_auto_schema(
     method='get',

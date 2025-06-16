@@ -29,20 +29,18 @@ class Bet(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bets')
     race = models.ForeignKey(Race, on_delete=models.CASCADE, related_name='bets')
     bet_date = models.DateTimeField(auto_now_add=True)
-
-    bet_top_3 = models.JSONField(default=list)
-    bet_last_5 = models.JSONField(default=list)
-    bet_last_10 = models.JSONField(default=list)
+    bet_top_3 = models.ManyToManyField(Driver, related_name='bet_top_3', blank=True)
+    bet_last_5 = models.ForeignKey(Driver, related_name='bet_last_5', on_delete=models.SET_NULL, null=True,
+                                   blank=True)
+    bet_last_10 = models.ForeignKey(Driver, related_name='bet_last_10', on_delete=models.SET_NULL, null=True,
+                                    blank=True)
     bet_fastest_lap = models.ForeignKey(
         Driver,
-        related_name='fastest_lap_bets',
+        related_name='fastest_lap_bets_id',
         on_delete=models.SET_NULL,
         null=True,
-        blank=True
-    )
+        blank=True)
 
-    class Meta:
-        unique_together = (('user', 'race'),)
 
-    def __str__(self):
-        return f"{self.user.username}'s bet for {self.race}"
+class Meta:
+    unique_together = (('user', 'race'),)
