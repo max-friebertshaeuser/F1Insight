@@ -122,7 +122,7 @@ def leave_group(request):
 
 
 @swagger_auto_schema(
-    method='post',
+    method='get',
     operation_summary="Get all betting groups",
     responses={
         200: openapi.Response(
@@ -141,7 +141,7 @@ def leave_group(request):
         ),
     }
 )
-@api_view(['POST'])
+@api_view(['GET'])
 def get_all_groups(request):
     groups = Group.objects.all()
     group_list = []

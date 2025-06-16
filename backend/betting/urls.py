@@ -1,16 +1,3 @@
-from django.urls import path
-from .views import (
-    create_group,
-    join_group,
-    leave_group,
-    get_all_groups,
-    remove_group,
-    set_bet,
-    show_all_races_to_bet,
-    show_bet,
-    delete_bet,
-    update_bet,
-)
 
 from django.urls import path
 from .views import (
