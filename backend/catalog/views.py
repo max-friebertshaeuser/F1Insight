@@ -18,6 +18,7 @@ from drf_yasg.utils   import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.decorators import api_view
 from django.http      import JsonResponse
+from math import floor, ceil
 
 @swagger_auto_schema(
     method='post',
@@ -173,7 +174,6 @@ def detailed_driver_view(request):
     return JsonResponse({'driver': data})
 
 
-#TODO: Implement past_team_results function
 @swagger_auto_schema(
     method='post',
     operation_summary="Box-Plot für Fahrer",
@@ -188,11 +188,93 @@ def detailed_driver_view(request):
         },
         required=['driver_id'],
     ),
-    responses={200: openapi.Response('Platzhalter')}
+    responses={200: openapi.Response('Erfolgreich'),
+               400: openapi.Response('Fehlerhafte Anfrage, z.B. fehlendes driver_id'),
+               404: openapi.Response('Fahrer nicht gefunden'),
+               }
+
 )
 @api_view(['POST'])
 def get_driver_box_plot(request):
-    return JsonResponse({'message': 'get_driver_box_plot'})
+    driver_id = request.data.get('driver_id')
+    if not driver_id:
+        return JsonResponse({"error": "Required field: driver_id"}, status=400)
+
+    # 1) Neueste Saison im System ermitteln
+    latest_season = (
+        Season.objects
+        .annotate(as_int=Cast('season', IntegerField()))
+        .order_by('-as_int')
+        .first()
+    )
+    if not latest_season:
+        return JsonResponse({"error": "No seasons defined"}, status=500)
+
+    max_year = int(latest_season.season)
+
+    # 2) Driver lookup
+    try:
+        driver = Driver.objects.get(pk=driver_id)
+    except Driver.DoesNotExist:
+        return JsonResponse({"error": f"No driver found with id {driver_id}"}, status=404)
+
+    # 3) Alle Saisons als ints ≤ max_year, absteigend
+    raw_seasons = Season.objects.values_list('season', flat=True)
+    candidate_years = []
+    for s in raw_seasons:
+        try:
+            y = int(s)
+        except ValueError:
+            continue
+        if y <= max_year:
+            candidate_years.append(y)
+    candidate_years = sorted(set(candidate_years), reverse=True)
+
+    # 4) Filter nur Saisons, in denen der Fahrer tatsächlich gestartet ist
+    seasons_with_results = []
+    for y in candidate_years:
+        if Result.objects.filter(
+                date__season__season=str(y),
+                driver=driver
+        ).exists():
+            seasons_with_results.append(y)
+        if len(seasons_with_results) >= 4:
+            break
+
+    # 5) Für jede Saison Boxplot‐Statistiken berechnen
+    boxplots = []
+    for y in seasons_with_results:
+        season = Season.objects.get(season=str(y))
+
+        # alle Positionen dieses Fahrers in dieser Saison
+        qs = (
+            Result.objects
+            .filter(date__season=season, driver=driver)
+            .annotate(
+                pos_int=Case(
+                    When(position__regex=r'^\d+$', then=Cast('position', IntegerField())),
+                    default=Value(9999),
+                    output_field=IntegerField(),
+                )
+            )
+            .values_list('pos_int', flat=True)
+        )
+        positions = [p for p in qs if p < 9999]
+
+        if not positions:
+            continue
+
+        positions.sort()
+        boxplots.append({
+            "x": y,
+            "min": positions[0],
+            "firstQuartile": _percentile(positions, 25),
+            "median": _percentile(positions, 50),
+            "thirdQuartile": _percentile(positions, 75),
+            "max": positions[-1],
+        })
+
+    return JsonResponse({"boxPlots": boxplots})
 
 @swagger_auto_schema(
     method='post',
@@ -424,7 +506,7 @@ def get_team_standings(request):
     year = request.data.get('year') or datetime.now().year
 
     if not team_id:
-        return Response(
+        return JsonResponse(
             {"error": "Required fields: team_id, year"},
             status=status.HTTP_400_BAD_REQUEST
         )
@@ -432,7 +514,7 @@ def get_team_standings(request):
     try:
         season = Season.objects.get(season=str(year))
     except Season.DoesNotExist:
-        return Response(
+        return JsonResponse(
             {"error": f"No data for season {year}"},
             status=status.HTTP_404_NOT_FOUND
         )
@@ -440,7 +522,7 @@ def get_team_standings(request):
     try:
         team = Constructor.objects.get(pk=team_id)
     except Constructor.DoesNotExist:
-        return Response(
+        return JsonResponse(
             {"error": f"No team found with id {team_id}"},
             status=status.HTTP_404_NOT_FOUND
         )
@@ -449,7 +531,7 @@ def get_team_standings(request):
         season=season, constructor=team
     ).select_related('driver')
     if not driver_teams.exists():
-        return Response(
+        return JsonResponse(
             {"error": f"No drivers found for team {team.name} in {year}"},
             status=status.HTTP_404_NOT_FOUND
         )
@@ -480,13 +562,13 @@ def get_team_standings(request):
                 "position": r.pos_int,
             })
 
-    return Response({
+    return JsonResponse({
         "races": standings
     })
 
 @swagger_auto_schema(
     method='post',
-    operation_summary="Box-Plot für Team",
+    operation_summary="Boxplot eines Teams",
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
@@ -494,13 +576,105 @@ def get_team_standings(request):
         },
         required=['team_id'],
     ),
-    responses={200: openapi.Response('Platzhalter')}
+    responses={
+        200: openapi.Response('Liste der Team-Ergebnisse'),
+        400: openapi.Response('Bad Request'),
+        404: openapi.Response('Keine Daten gefunden'),
+    }
 )
 @api_view(['POST'])
-#TODO: Implement past_team_results function
-@api_view(['POST'])
 def get_team_box_plot(request):
-    return JsonResponse({'message': 'get_team_box_plot'})
+    team_id = request.data.get('team_id')
+    if not team_id:
+        return JsonResponse({"error": "Required field: team_id"}, status=400)
+
+    # 1) Ermitteln der neuesten Saison im System
+    latest_season = (
+        Season.objects
+        .annotate(as_int=Cast('season', IntegerField()))
+        .order_by('-as_int')
+        .first()
+    )
+    if not latest_season:
+        return JsonResponse({"error": "No seasons defined"}, status=500)
+
+    max_year = int(latest_season.season)
+
+    # 2) Team-Lookup
+    try:
+        team = Constructor.objects.get(pk=team_id)
+    except Constructor.DoesNotExist:
+        return JsonResponse({"error": f"No team found with id {team_id}"}, status=404)
+
+    # 3) Alle Saisons als ints sammeln, ≤ max_year, absteigend
+    raw_seasons = Season.objects.values_list('season', flat=True)
+    candidate_years = []
+    for s in raw_seasons:
+        try:
+            y = int(s)
+        except ValueError:
+            continue
+        if y <= max_year:
+            candidate_years.append(y)
+    candidate_years = sorted(set(candidate_years), reverse=True)
+
+    # 4) Filtere nur jene Saisons, in denen das Team wirklich gestartet ist
+    seasons_with_results = []
+    for y in candidate_years:
+        # existiert mindestens ein Result für team in Saison y?
+        if Result.objects.filter(
+                date__season__season=str(y),
+                constructor=team
+        ).exists():
+            seasons_with_results.append(y)
+        if len(seasons_with_results) >= 4:
+            break
+
+    # 5) Für jede gefundene Saison Boxplot‐Statistiken berechnen
+    boxplots = []
+    for y in seasons_with_results:
+        season = Season.objects.get(season=str(y))
+
+        # IDs der Fahrer dieses Teams in Saison y
+        driver_ids = list(
+            DriverTeam.objects
+            .filter(season=season, constructor=team)
+            .values_list('driver_id', flat=True)
+        )
+
+        # alle Rennpositionen dieser Fahrer in dieser Saison sammeln
+        positions = []
+        races = Race.objects.filter(season=season)
+        for race in races:
+            qs = (
+                Result.objects
+                .filter(date=race, constructor=team, driver_id__in=driver_ids)
+                .annotate(
+                    pos_int=Case(
+                        When(position__regex=r'^\d+$',
+                             then=Cast('position', IntegerField())),
+                        default=Value(9999),
+                        output_field=IntegerField(),
+                    )
+                )
+                .values_list('pos_int', flat=True)
+            )
+            positions.extend(p for p in qs if p < 9999)
+
+        # falls Positionen gefunden wurden, sortieren und Quartile berechnen
+        if positions:
+            positions.sort()
+            boxplots.append({
+                "x": y,
+                "min": positions[0],
+                "firstQuartile": _percentile(positions, 25),
+                "median": _percentile(positions, 50),
+                "thirdQuartile": _percentile(positions, 75),
+                "max": positions[-1],
+            })
+
+    # 6) Antwort
+    return JsonResponse({"boxPlots": boxplots})
 
 @swagger_auto_schema(
     method='post',
@@ -525,11 +699,11 @@ def get_team_box_plot(request):
 def insight_driver_standings(request):
     year = request.data.get('year')
     if not year:
-        return Response({"error": "Missing required field: year"}, status=status.HTTP_400_BAD_REQUEST)
+        return JsonResponse({"error": "Missing required field: year"}, status=status.HTTP_400_BAD_REQUEST)
     try:
         season = Season.objects.get(season=str(year))
     except Season.DoesNotExist:
-        return Response({"error": f"No data for season {year}"}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({"error": f"No data for season {year}"}, status=status.HTTP_404_NOT_FOUND)
     qs = (
         Driverstanding.objects
         .filter(season=season)
@@ -547,7 +721,7 @@ def insight_driver_standings(request):
             "points": s.points,
         })
         data.sort(key=lambda x: int(x["position"]) if x["position"].isdigit() else 9999)
-    return Response(data)
+    return JsonResponse(data)
 
 
 @swagger_auto_schema(
@@ -570,12 +744,12 @@ def insight_driver_standings(request):
 def insight_team_standings(request):
     year = request.data.get('year')
     if not year:
-        return Response({"error": "Missing required field: year"}, status=status.HTTP_400_BAD_REQUEST)
+        return JsonResponse({"error": "Missing required field: year"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         season = Season.objects.get(season=str(year))
     except Season.DoesNotExist:
-        return Response({"error": f"No data for season {year}"}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({"error": f"No data for season {year}"}, status=status.HTTP_404_NOT_FOUND)
 
     qs = (
         Constructorstanding.objects
@@ -593,4 +767,22 @@ def insight_team_standings(request):
         })
         data.sort(key=lambda x: int(x["position"]) if x["position"].isdigit() else 9999)
 
-    return Response(data)
+    return JsonResponse(data)
+
+
+def _percentile(data, percent):
+    """
+    Lineare Interpolation für den p-ten Perzentil-Wert
+    data: bereits sortierte Liste von Zahlen
+    percent: Float zwischen 0 und 100
+    """
+    if not data:
+        return None
+    k = (len(data) - 1) * (percent / 100.0)
+    f = floor(k)
+    c = ceil(k)
+    if f == c:
+        return data[int(k)]
+    d0 = data[f] * (c - k)
+    d1 = data[c] * (k - f)
+    return d0 + d1
