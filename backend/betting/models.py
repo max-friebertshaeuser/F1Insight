@@ -23,7 +23,5 @@ class Bet(models.Model):
     bet_last_5 = models.JSONField(default=list)
     bet_last_10 = models.JSONField(default=list)
     bet_fastest_lap = models.ForeignKey(Driver, related_name='fastest_lap_bets', on_delete=models.SET_NULL, null=True, blank=True)
-    safety_car = models.BooleanField(default=False)
-
     class Meta:
         unique_together = (('user', 'race'),)
