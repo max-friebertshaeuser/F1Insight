@@ -35,7 +35,7 @@ urlpatterns = [
     path('groups/', get_all_groups, name='get_all_groups'),
     path('groups/<int:group_id>/delete/', remove_group, name='remove_group'),
 
-    path('bets/', set_bet, name='set_bet'),
+    path('bets/createbet', set_bet, name='set_bet'),
     path('bets/available-races/', show_all_races_to_bet, name='available_races'),
     path('bets/<int:race_id>/', show_bet, name='show_bet'),
     path('bets/<int:race_id>/delete/', delete_bet, name='delete_bet'),
