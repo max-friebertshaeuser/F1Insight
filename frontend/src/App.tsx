@@ -7,6 +7,9 @@ import "./App.css";
 import DriversPage from "./pages/Drivers.tsx"; // Ensure you have your CSS file for global styles
 import Login from "./pages/Login.tsx";
 import Register from "./pages/Register.tsx";
+import PrivateRoute from "./types/PrivateRoute.tsx";
+import BettingGame from "./pages/BettingGame.tsx";
+import Logout from "./pages/Logout.tsx";
 
 function App() {
     return (
@@ -19,8 +22,10 @@ function App() {
                     <Route path="/" element={<HomePage />} />
                     <Route path="/standings" element={<StandingsPage />} />
                     <Route path="/login" element={<Login />} />
+                    <Route path="/logout" element={<Logout />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/drivers" element={<DriversPage/>} />
+                    <Route path="/bettinggame" element={<PrivateRoute><BettingGame /></PrivateRoute>} />
                     {/* Add more pages here */}
                     <Route path="*" element={<NotFoundPage />} />
                 </Routes>

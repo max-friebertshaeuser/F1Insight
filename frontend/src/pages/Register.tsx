@@ -46,7 +46,7 @@ function Standings() {
 
             <div className="mb-4">
             <label htmlFor="username" className="block text-sm font-medium mb-1">
-                Benutzername
+                username
             </label>
             <input
                 type="text"
@@ -60,7 +60,7 @@ function Standings() {
 
             <div className="mb-4">
             <label htmlFor="mail" className="block text-sm font-medium mb-1">
-                Mail
+                mail
             </label>
             <input
                 type="text"
@@ -74,7 +74,7 @@ function Standings() {
 
             <div className="mb-4">
             <label htmlFor="password" className="block text-sm font-medium mb-1">
-                Passwort
+                password
             </label>
             <input
                 type="password"
@@ -94,9 +94,14 @@ function Standings() {
             type="submit"
             className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
             >
-            Login
+            Sign up
             </button>
-        <p>Already have an account? <Link to="/login">Login</Link></p>
+            <p className="mt-4 text-sm text-center">
+                Already have an account?{' '}
+                <Link to="/login" className="text-blue-400 hover:underline">
+                    Log in
+                </Link>
+            </p>        
         </form>
         </div>
     );
