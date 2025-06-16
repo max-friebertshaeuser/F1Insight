@@ -6,8 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from drf_yasg import openapi
 
-from .models import Group, Bet
-from django.views.decorators.http import require_http_methods
+from .models import Group, Bet, BetStat
 from catalog.models import Race, Driver, Driverstanding, Season
 import json
 from datetime import date
@@ -33,31 +32,29 @@ from rest_framework.decorators import api_view
         500: openapi.Response('Server error'),
     }
 )
-@permission_classes([IsAuthenticated])
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def create_group(request):
     owner_username = request.data.get('name')
     group_name = request.data.get('group_name')
     created_at = timezone.now()
-    members_usernames = [owner_username]
+    if not owner_username or not group_name:
+        return Response({'status': 'missing required fields'}, status=400)
     try:
         owner = User.objects.get(username=owner_username)
     except User.DoesNotExist:
         return Response({'status': 'owner not found'}, status=404)
 
-    try:
-        if Group.objects.filter(name=group_name).exists():
-            return Response({'status': 'group already exists'}, status=400)
+    if Group.objects.filter(name=group_name).exists():
+        return Response({'status': 'group already exists'}, status=400)
 
+    try:
         group = Group.objects.create(owner=owner, name=group_name, created_at=created_at)
-        members = User.objects.filter(username__in=members_usernames)
-        group.members.set(members)
+        BetStat.objects.create(user=owner, group=group)
         group.save()
         return Response({'status': 'group created', 'group_id': group.id})
     except Exception as e:
         return Response({'status': 'error', 'detail': str(e)}, status=500)
-
-
 @swagger_auto_schema(
     method='post',
     operation_summary="Join an existing betting group",
@@ -73,17 +70,21 @@ def create_group(request):
         404: openapi.Response('group not found'),
     }
 )
-@permission_classes([IsAuthenticated])
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def join_group(request):
     group_name = request.data.get('group_name')
-    user = User.objects.get(username=request.user.username)
+
     try:
         group = Group.objects.get(name=group_name)
-        group.members.add(user)
-        return Response({'status': 'joined group successfully'})
     except Group.DoesNotExist:
         return Response({'status': 'group not found'}, status=404)
+
+    user = request.user
+    betstat, created = BetStat.objects.get_or_create(user=user, group=group)
+
+    return Response({'status': 'joined group successfully'})
+
 
 
 @swagger_auto_schema(
@@ -101,37 +102,47 @@ def join_group(request):
         404: openapi.Response('group not found'),
     }
 )
-@permission_classes([IsAuthenticated])
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def leave_group(request):
     group_name = request.data.get('group_name')
-    user = User.objects.get(username=request.user.username)
+    user = request.user
+
     try:
         group = Group.objects.get(name=group_name)
-        group.members.remove(user)
-        return Response({'status': 'left group successfully'})
     except Group.DoesNotExist:
         return Response({'status': 'group not found'}, status=404)
+    try:
+        BetStat.objects.filter(user=request.user, group=group).delete()
+    except BetStat.DoesNotExist:
+        return Response({'status': 'user is not in any group'}, status=400)
+
+
+    return Response({'status': 'left group successfully'})
 
 
 @swagger_auto_schema(
     method='post',
-    operation_summary="join an existing betting group",
-    request_body=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        properties={
-            'group_name': openapi.Schema(type=openapi.TYPE_STRING, description='name of the group'),
-        },
-        required=['group_name'],
-    ),
+    operation_summary="Get all betting groups",
     responses={
-        200: openapi.Response('joined group successfully'),
-        404: openapi.Response('group not found'),
+        200: openapi.Response(
+            description="List of all groups",
+            examples={
+                "application/json": [
+                    {
+                        "group_id": 1,
+                        "group_name": "Champions",
+                        "owner": "user1",
+                        "created_at": "2024-07-01T12:00:00Z",
+                        "members": ["user1", "user2"]
+                    }
+                ]
+            }
+        ),
     }
 )
 @api_view(['POST'])
 def get_all_groups(request):
-    user = request.user
     groups = Group.objects.all()
     group_list = []
     for group in groups:
@@ -140,7 +151,10 @@ def get_all_groups(request):
             'group_name': group.name,
             'owner': group.owner.username,
             'created_at': group.created_at.isoformat(),
-            'members': [member.username for member in group.members.all()]
+            'members': [
+                bs.user.username for bs in BetStat.objects.filter(group=group)
+            ]
+
         })
     return Response({'status': 'success', 'groups': group_list})
 
@@ -164,9 +178,9 @@ def get_all_groups(request):
 @permission_classes([IsAuthenticated])
 @api_view(['POST'])
 def remove_group(request):
-    group_id = request.data.get('group_id')
+    name = request.data.get('name')
     try:
-        group = Group.objects.get(id=group_id)
+        group = Group.objects.get(name=name)
         if group.owner != request.user:
             return Response({'status': 'not authorized to delete this group'}, status=403)
         group.delete()
