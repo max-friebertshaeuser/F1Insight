@@ -24,9 +24,9 @@ urlpatterns = [
 
     path('bets/createbet', set_bet, name='set_bet'),
     path('bets/available-races/', show_all_races_to_bet, name='available_races'),
-    path('bets/<int:race_id>/', show_bet, name='show_bet'),
-    path('bets/<int:race_id>/delete/', delete_bet, name='delete_bet'),
-    path('bets/<int:race_id>/update/', update_bet, name='update_bet'),
+    path('bets/<str:race_id>/', show_bet, name='show_bet'),
+    path('bets/<str:race_id>/delete/', delete_bet, name='delete_bet'),
+    path('bets/<str:race_id>/update/', update_bet, name='update_bet'),
     path('bets/standings/<season>/<driver_id>/top5-before-choice/', get_last_5_drivers_before,
          name='bet_standings_top5_before_choice'),
     path('bets/standings/<season>/<driver_id>/bottom5-after-choice/', get_last_5_drivers,

@@ -92,36 +92,47 @@ def get_current_drivers(request):
     """
     Returns a list of current drivers with their details.
     """
-    # 1. Aktuelle Saison bestimmen (hier: nach dem Feld 'season' absteigend)
-    latest = Season.objects.annotate(as_int=Cast('season', IntegerField())).order_by('-as_int').first()
-    current_season = latest.season
-    if not current_season:
+    # 1. Aktuelle Saison bestimmen
+    latest_season = (
+        Season.objects
+        .annotate(as_int=Cast('season', IntegerField()))
+        .order_by('-as_int')
+        .first()
+    )
+    if not latest_season:
         return JsonResponse({'error': "Database has no season"}, status=404)
 
-    # 2. Alle DriverTeam-Einträge der aktuellen Saison laden
-    teams = DriverTeam.objects.filter(
-        season=current_season
-    ).select_related('driver')
+    # 2. Alle Fahrer-Teams der aktuellen Saison laden
+    driver_teams = DriverTeam.objects.filter(
+        season=latest_season
+    ).select_related('driver', 'constructor')
 
-    # 3. Punkte aus der Fahrerwertung (Driverstanding) der aktuellen Saison einlesen
-    standings = Driverstanding.objects.filter(
-        season=current_season
-    )
-    points_map = {
-        s.driver_id: s.points
-        for s in standings
+    # 3. Fahrerwertung der aktuellen Saison einlesen
+    standings_qs = Driverstanding.objects.filter(
+        season=latest_season
+    ).values('driver_id', 'points', 'positionText')
+    # Mapping driver_id -> {'points': ..., 'position': ...}
+    standings_map = {
+        s['driver_id']: {
+            'points': s['points'],
+            'position': s['positionText'],
+        }
+        for s in standings_qs
     }
 
     # 4. Ergebnis-Liste zusammenbauen
     drivers_data = []
-    for team in teams:
-        driver = team.driver
+    for dt in driver_teams:
+        driver = dt.driver
+        standing = standings_map.get(driver.driver, {})
         drivers_data.append({
-            'number': team.driver_season_number,
+            'number': dt.driver_season_number,
             'forename': driver.forename,
             'surname': driver.surname,
             'nationality': driver.nationality,
-            'points': points_map.get(driver.driver, '0'),
+            'team': dt.constructor.name,
+            'points': standing.get('points', '0'),
+            'position': standing.get('position', ''),
             'driver_id': driver.driver,
         })
 
