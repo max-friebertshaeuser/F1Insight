@@ -269,8 +269,8 @@ def set_bet(request):
             user=user,
             group=group,
             race=race,
-            bet_last_5=Driver.objects.filter(driver=data.get("bet_last_5_id")).first(),
-            bet_last_10=Driver.objects.filter(driver=data.get("bet_last_10_id")).first(),
+            bet_last_5=Driver.objects.filter(driver=data.get("bet_last_5")).first(),
+            bet_last_10=Driver.objects.filter(driver=data.get("bet_last_10")).first(),
             bet_fastest_lap=Driver.objects.filter(driver=data.get("bet_fastest_lap")).first(),
         )
 
