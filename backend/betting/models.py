@@ -34,13 +34,8 @@ class Bet(models.Model):
                                    blank=True)
     bet_last_10 = models.ForeignKey(Driver, related_name='bet_last_10', on_delete=models.SET_NULL, null=True,
                                     blank=True)
-    bet_fastest_lap = models.ForeignKey(
-        Driver,
-        related_name='fastest_lap_bets_id',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True)
-
+    bet_fastest_lap = models.ForeignKey(Driver, related_name='fastest_lap_bets', on_delete=models.SET_NULL,
+                                        null=True, blank=True)
 
 class Meta:
     unique_together = (('user', 'race'),)
