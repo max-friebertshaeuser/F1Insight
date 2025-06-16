@@ -15,7 +15,7 @@ const Navbar = () => {
     const [mobileOpen, setMobileOpen] = useState(false);
 
     return (
-        <nav className="bg-f1-black text-f1-white font-fregular py-4 px-6">
+        <nav className="bg-f1-black text-f1-white font-fregular py-4 px-6 fixed top-0 left-0 w-full z-50">
             <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                     <img

@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-
 @font-face {
   font-family: "Formula1Wide";
   src: url("./assets/fonts/Formula1-Wide.otf") format("opentype");
@@ -49,6 +48,7 @@
   --color-team-astonmartin: #006F62;
   --color-team-alpine: #0090FF;
   --color-team-williams: #005AFF;
-  --color-team-alfa: #900000;
+  --color-team-sauber: #01C00E;
   --color-team-haas: #B6BABD;
+  --color-team-racingbull: #6C98FF;
 }
