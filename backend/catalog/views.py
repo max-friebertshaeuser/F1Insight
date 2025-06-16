@@ -164,7 +164,6 @@ def detailed_driver_view(request):
 
     try:
         driver = Driver.objects.get(pk=driver_id)
-
     except Driver.DoesNotExist:
         return JsonResponse(
             {'error': f'Kein Fahrer mit der ID "{driver_id}" gefunden.'},
@@ -172,7 +171,9 @@ def detailed_driver_view(request):
         )
 
     # 1. Aktuelle Saison holen
-    latest = Season.objects.annotate(as_int=Cast('season', IntegerField())).order_by('-as_int').first()
+    latest = Season.objects.annotate(
+        as_int=Cast('season', IntegerField())
+    ).order_by('-as_int').first()
     current_season = latest.season
 
     # 2. Karriere-Statistiken
@@ -189,7 +190,7 @@ def detailed_driver_view(request):
     championships = Driverstanding.objects.filter(
         driver=driver, positionText='1'
     ).count()
-    # nicht numerische werte wie R rauswerfen und 0 als grid falls nicht angetreten
+    # Best Grid
     numeric_grids = career_qs.filter(grid__regex=r'^[1-9]\d*$')
     best_grid = numeric_grids.annotate(
         grid_int=Cast('grid', IntegerField())
@@ -198,13 +199,14 @@ def detailed_driver_view(request):
     )['best']
 
     # 3. Aktuelle Saison-Statistiken
-    #   Team
+    #   Team & Nummer
     dt = DriverTeam.objects.filter(
         driver=driver, season=current_season
     ).select_related('constructor').first()
     team_name = dt.constructor.name if dt else None
+    current_number = dt.driver_season_number if dt else None
 
-    #   Fahrerwertung (Punkte, Siege)
+    #   Fahrerwertung
     ds = Driverstanding.objects.filter(
         driver=driver, season=current_season
     ).first()
@@ -223,12 +225,12 @@ def detailed_driver_view(request):
         position__in=['1', '2', '3']
     ).count()
 
-    # 4. Antwort-Daten zusammenstellen
+    # 4. Antwort-Daten
     data = {
         'forename': driver.forename,
         'surname': driver.surname,
         'date_of_birth': driver.dob.isoformat(),
-        'place_of_birth': driver.nationality,  # besser: eigenes Feld birth_place
+        'place_of_birth': driver.nationality,
         'career_wins': career_wins,
         'career_points': career_points,
         'career_podiums': career_podiums,
@@ -237,6 +239,7 @@ def detailed_driver_view(request):
         'world_championships': championships,
         'best_grid_position': best_grid,
         'current_team': team_name,
+        'current_number': current_number,
         'current_season_points': current_points,
         'current_season_wins': current_wins,
         'current_season_podiums': current_podiums,

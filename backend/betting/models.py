@@ -29,13 +29,28 @@ class Bet(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bets')
     race = models.ForeignKey(Race, on_delete=models.CASCADE, related_name='bets')
     bet_date = models.DateTimeField(auto_now_add=True)
-    bet_top_3 = models.ManyToManyField(Driver, related_name='bet_top_3', blank=True)
     bet_last_5 = models.ForeignKey(Driver, related_name='bet_last_5', on_delete=models.SET_NULL, null=True,
                                    blank=True)
     bet_last_10 = models.ForeignKey(Driver, related_name='bet_last_10', on_delete=models.SET_NULL, null=True,
                                     blank=True)
     bet_fastest_lap = models.ForeignKey(Driver, related_name='fastest_lap_bets', on_delete=models.SET_NULL,
                                         null=True, blank=True)
+
+    bet_top_3 = models.ManyToManyField(
+        Driver,
+        through='BetTop3',
+        related_name='bets_top3'
+    )
+
+
+class BetTop3(models.Model):
+    bet       = models.ForeignKey(Bet, on_delete=models.CASCADE)
+    driver    = models.ForeignKey(Driver, on_delete=models.CASCADE)
+    position  = models.PositiveSmallIntegerField()
+
+    class Meta:
+        ordering = ['position']
+        unique_together = [['bet', 'position']]
 
 class Meta:
     unique_together = (('user', 'race'),)
