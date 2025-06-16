@@ -30,7 +30,7 @@ function Standings() {
         localStorage.setItem('refresh_token', data.refresh);
 
         // Weiterleitung zur Profil-Seite
-        navigate('/profile');
+        navigate('/bettinggame');
         } catch (err: any) {
         setError(err.message);
         }
