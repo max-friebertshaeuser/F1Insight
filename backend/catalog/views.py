@@ -225,7 +225,16 @@ def detailed_driver_view(request):
         position__in=['1', '2', '3']
     ).count()
 
-    # 4. Antwort-Daten
+    # 4. Seasons, in denen der Fahrer aktiv war
+    seasons_active = list(
+        DriverTeam.objects
+        .filter(driver=driver)
+        .values_list('season__season', flat=True)
+        .distinct()
+        .order_by('-season__season')
+    )
+
+    # 5. Antwort-Daten
     data = {
         'forename': driver.forename,
         'surname': driver.surname,
@@ -244,6 +253,7 @@ def detailed_driver_view(request):
         'current_season_wins': current_wins,
         'current_season_podiums': current_podiums,
         'current_season_poles': current_poles,
+        'seasons_active': seasons_active,
     }
 
     return JsonResponse({'driver': data})

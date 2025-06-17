@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from drf_yasg import openapi
 
 from .models import Group, Bet, BetStat, BetTop3
-from catalog.models import Race, Driver, Driverstanding, Season
+from catalog.models import Race, Driver, Driverstanding, Season, Result
 import json
 from datetime import date, datetime
 from django.http import JsonResponse
@@ -56,6 +56,8 @@ def create_group(request):
         return Response({'status': 'group created', 'group_id': group.id})
     except Exception as e:
         return Response({'status': 'error', 'detail': str(e)}, status=500)
+
+
 @swagger_auto_schema(
     method='post',
     operation_summary="Join an existing betting group",
@@ -211,9 +213,27 @@ def remove_group(request):
 @api_view(["GET"])
 def show_all_races_to_bet(request):
     today = date.today()
-    races = Race.objects.filter(date__gte=today).order_by('date')
-    race_data = [{"id": r.date, "season": r.season.season, "circuit": r.circuit.name, "date": r.date} for r in races]
-    return JsonResponse(race_data, safe=False)
+    next_race = (
+        Race.objects
+        .filter(date__gte=today)
+        .order_by('date')
+        .select_related('season', 'circuit')
+        .first()
+    )
+
+    if not next_race:
+        return JsonResponse(
+            {'error': 'No upcoming races found.'},
+            status=404
+        )
+
+    data = {
+        'id': next_race.date,
+        'season': next_race.season.season,
+        'circuit': next_race.circuit.name,
+        'date': next_race.date,
+    }
+    return JsonResponse(data)
 
 
 @swagger_auto_schema(
@@ -250,8 +270,8 @@ def set_bet(request):
     data = request.data
 
     # 1) Pflichtdaten prüfen
-    race_str  = data.get("race")
-    group_id  = data.get("group")
+    race_str = data.get("race")
+    group_id = data.get("group")
     if not race_str or not group_id:
         return JsonResponse(
             {"error": "Missing race or group field."},
@@ -285,12 +305,12 @@ def set_bet(request):
 
     # 5) Bet anlegen (ohne Top-3)
     bet = Bet.objects.create(
-        user           = user,
-        group          = group,
-        race           = race,
-        bet_last_5     = get_driver(data.get("bet_last_5")),
-        bet_last_10    = get_driver(data.get("bet_last_10")),
-        bet_fastest_lap= get_driver(data.get("bet_fastest_lap")),
+        user=user,
+        group=group,
+        race=race,
+        bet_last_5=get_driver(data.get("bet_last_5")),
+        bet_last_10=get_driver(data.get("bet_last_10")),
+        bet_fastest_lap=get_driver(data.get("bet_fastest_lap")),
     )
 
     # 6) Top-3 über Through-Model anlegen
@@ -318,17 +338,18 @@ def set_bet(request):
     return JsonResponse({
         "message": "Bet created successfully",
         "bet": {
-            "id":              bet.id,
-            "user":            user.username,
-            "group":           group.id,
-            "race":            race_str,
-            "bet_top_3":       ordered_top3,
-            "bet_last_5":      bet.bet_last_5.driver         if bet.bet_last_5 else None,
-            "bet_last_10":     bet.bet_last_10.driver        if bet.bet_last_10 else None,
-            "bet_fastest_lap": bet.bet_fastest_lap.driver    if bet.bet_fastest_lap else None,
-            "bet_date":        bet.bet_date.isoformat(),
+            "id": bet.id,
+            "user": user.username,
+            "group": group.id,
+            "race": race_str,
+            "bet_top_3": ordered_top3,
+            "bet_last_5": bet.bet_last_5.driver if bet.bet_last_5 else None,
+            "bet_last_10": bet.bet_last_10.driver if bet.bet_last_10 else None,
+            "bet_fastest_lap": bet.bet_fastest_lap.driver if bet.bet_fastest_lap else None,
+            "bet_date": bet.bet_date.isoformat(),
         }
     }, status=status.HTTP_201_CREATED)
+
 
 @swagger_auto_schema(
     method='get',
@@ -391,17 +412,18 @@ def show_bet(request, race_id):
     top3_ids = [bt3.driver.driver for bt3 in BetTop3.objects.filter(bet=bet)]
 
     # 4) FK-Felder serialisieren
-    last5_id   = bet.bet_last_5.driver      if bet.bet_last_5      else None
-    last10_id  = bet.bet_last_10.driver     if bet.bet_last_10     else None
+    last5_id = bet.bet_last_5.driver if bet.bet_last_5 else None
+    last10_id = bet.bet_last_10.driver if bet.bet_last_10 else None
     fastest_id = bet.bet_fastest_lap.driver if bet.bet_fastest_lap else None
 
     return JsonResponse({
-        "race":            race_id,
-        "bet_top_3":       top3_ids,
-        "bet_last_5":      last5_id,
-        "bet_last_10":     last10_id,
+        "race": race_id,
+        "bet_top_3": top3_ids,
+        "bet_last_5": last5_id,
+        "bet_last_10": last10_id,
         "bet_fastest_lap": fastest_id,
     })
+
 
 @swagger_auto_schema(
     method='delete',
@@ -572,15 +594,15 @@ def update_bet(request, race_id):
     return JsonResponse({
         "message": "Bet updated successfully",
         "bet": {
-            "id":              bet.id,
-            "user":            user.username,
-            "group":           bet.group.id,
-            "race":            race_id,
-            "bet_top_3":       ordered_top3,
-            "bet_last_5":      bet.bet_last_5.driver        if bet.bet_last_5 else None,
-            "bet_last_10":     bet.bet_last_10.driver       if bet.bet_last_10 else None,
-            "bet_fastest_lap": bet.bet_fastest_lap.driver   if bet.bet_fastest_lap else None,
-            "bet_date":        bet.bet_date.isoformat(),
+            "id": bet.id,
+            "user": user.username,
+            "group": bet.group.id,
+            "race": race_id,
+            "bet_top_3": ordered_top3,
+            "bet_last_5": bet.bet_last_5.driver if bet.bet_last_5 else None,
+            "bet_last_10": bet.bet_last_10.driver if bet.bet_last_10 else None,
+            "bet_fastest_lap": bet.bet_fastest_lap.driver if bet.bet_fastest_lap else None,
+            "bet_date": bet.bet_date.isoformat(),
         }
     }, status=status.HTTP_200_OK)
 
@@ -625,100 +647,106 @@ def update_bet(request, race_id):
 )
 @permission_classes([IsAuthenticated])
 @api_view(["GET"])
-def get_last_5_drivers_before(request, season, driver_id):
-    try:
-        target = Driverstanding.objects.get(season__season=season, driver__driver=driver_id)
-        target_pos = int(target.position)
-    except (Driverstanding.DoesNotExist, ValueError):
-        return JsonResponse({"error": "Driver or season not found or invalid position."}, status=404)
+def get_last_5_drivers_before(request):
+    last_race = Race.objects.filter(date__lt=date.today()).order_by('-date').first()
+    if not last_race:
+        return JsonResponse({"error": "No completed races found."}, status=404)
 
     drivers = (
-        Driverstanding.objects
-        .filter(season__season=season)
-        .exclude(driver__driver=driver_id)
+        Result.objects
+        .filter(date=last_race)
+        .exclude(position__in=["", "\\N"])
         .extra(select={'pos_int': "CAST(position AS INTEGER)"})
-        .filter(position__lt=target_pos)
-        .order_by('-pos_int')[:5]
+        .order_by('-pos_int')[5:10]
     )
 
     data = [
         {
-            "driver": ds.driver.driver,
-            "forename": ds.driver.forename,
-            "surname": ds.driver.surname,
-            "constructor": ds.constructor.name,
-            "position": ds.position,
-            "points": ds.points
+            "driver": res.driver.driver,
+            "forename": res.driver.forename,
+            "surname": res.driver.surname,
+            "constructor": res.constructor.name,
+            "position": res.position,
+            "points": res.points
         }
-        for ds in drivers
+        for res in reversed(drivers)  # optional: kleinste Position zuerst
     ]
     return JsonResponse(data, safe=False)
 
 
 @swagger_auto_schema(
     method='get',
-    operation_summary="Get the next 5 drivers after a given driver in the standings",
-    manual_parameters=[
-        openapi.Parameter(
-            'season',
-            openapi.IN_PATH,
-            description="Season year",
-            type=openapi.TYPE_STRING,
-            required=True
-        ),
-        openapi.Parameter(
-            'driver_id',
-            openapi.IN_PATH,
-            description="Driver ID",
-            type=openapi.TYPE_STRING,
-            required=True
-        ),
-    ],
+    operation_summary="Get the last 5 drivers of the most recent race",
     responses={
         200: openapi.Response(
-            description="List of next 5 drivers",
+            description="List of last 5 drivers in the most recent race",
             examples={
                 "application/json": [
                     {
-                        "driver": "hamilton",
-                        "forename": "Lewis",
-                        "surname": "Hamilton",
-                        "constructor": "Mercedes",
-                        "position": "4",
-                        "points": "120"
+                        "driver": "sargeant",
+                        "forename": "Logan",
+                        "surname": "Sargeant",
+                        "constructor": "Williams",
+                        "position": "20",
+                        "points": "0"
                     }
                 ]
             }
         ),
-        404: openapi.Response(description="Driver or season not found or invalid position.")
+        404: openapi.Response(description="No completed races found.")
     }
 )
 @api_view(["GET"])
-def get_last_5_drivers(request, season, driver_id):
-    try:
-        target = Driverstanding.objects.get(season__season=season, driver__driver=driver_id)
-        target_pos = int(target.position)
-    except (Driverstanding.DoesNotExist, ValueError):
-        return JsonResponse({"error": "Driver or season not found or invalid position."}, status=404)
+def get_last_5_drivers(request):
+    last_race = Race.objects.filter(date__lt=date.today()).order_by('-date').first()
+    if not last_race:
+        return JsonResponse({"error": "No completed races found."}, status=404)
 
     drivers = (
-        Driverstanding.objects
-        .filter(season__season=season)
-        .exclude(driver__driver=driver_id)
+        Result.objects
+        .filter(date=last_race)
         .extra(select={'pos_int': "CAST(position AS INTEGER)"})
-        .filter(position__gt=target_pos)
-        .order_by('pos_int')[:5]
+        .exclude(position__in=["", "\\N"])
+        .order_by('-pos_int')[:5]
     )
 
     data = [
         {
-            "driver": ds.driver.driver,
-            "forename": ds.driver.forename,
-            "surname": ds.driver.surname,
-            "constructor": ds.constructor.name,
-            "position": ds.position,
-            "points": ds.points
+            "driver": res.driver.driver,
+            "forename": res.driver.forename,
+            "surname": res.driver.surname,
+            "constructor": res.constructor.name,
+            "position": res.position,
+            "points": res.points
         }
-        for ds in drivers
+        for res in reversed(drivers)
     ]
     return JsonResponse(data, safe=False)
+
+@api_view(['Post'])
+@permission_classes([IsAuthenticated])
+def get_group_info(request):
+    group_id = request.data.get('group_id')
+    if not group_id:
+        return Response({'status': 'missing group_id'}, status=400)
+    try:
+        group = Group.objects.get(id=group_id)
+        bet_stats  = BetStat.objects.filter(group=group)
+        group_info = {
+            'group_id': group.id,
+            'group_name': group.name,
+            'owner': group.owner.username,
+            'bet_stats': [
+                {
+                    'user': bs.user.username,
+                    'points': bs.points
+                } for bs in bet_stats
+            ]
+        }
+        return Response(group_info)
+
+    except Group.DoesNotExist:
+        return Response({'status': 'group not found'}, status=404)
+
+
+
