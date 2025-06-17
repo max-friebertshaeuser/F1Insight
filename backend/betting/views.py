@@ -1,3 +1,6 @@
+import uuid
+from uuid import UUID
+
 from django.utils import timezone
 from django.contrib.auth.models import User
 from drf_yasg.utils import swagger_auto_schema
@@ -39,6 +42,7 @@ def create_group(request):
     owner_username = request.data.get('name')
     group_name = request.data.get('group_name')
     created_at = timezone.now()
+    join_link = uuid.uuid4()
     if not owner_username or not group_name:
         return Response({'status': 'missing required fields'}, status=400)
     try:
@@ -53,7 +57,7 @@ def create_group(request):
         group = Group.objects.create(owner=owner, name=group_name, created_at=created_at)
         BetStat.objects.create(user=owner, group=group)
         group.save()
-        return Response({'status': 'group created', 'group_id': group.id})
+        return Response({'status': 'group created', 'group_id': group.id, 'join_link': str(join_link)})
     except Exception as e:
         return Response({'status': 'error', 'detail': str(e)}, status=500)
 
