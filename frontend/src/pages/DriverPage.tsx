@@ -2,6 +2,7 @@ import {useParams} from 'react-router-dom';
 import {useEffect, useState} from 'react';
 import {getTeamClass} from "../utils/formatTeamClass.ts";
 import CustomGraph from "../components/CustomGraph.tsx";
+import Button from "../components/Button.tsx";
 
 interface DriverDetails {
     driver_id: string;
@@ -22,11 +23,13 @@ interface DriverDetails {
     current_season_wins: number;
     current_season_podiums: number;
     current_season_poles: number;
+    seasons_active: number[]
 }
 
 const DriverPage = () => {
     const {id} = useParams();
     const [driver, setDriver] = useState<DriverDetails | null>(null);
+    const [season, setSeason] = useState(new Date().getFullYear()); // default to current season
 
     useEffect(() => {
         const fetchDriver = async () => {
@@ -93,7 +96,7 @@ const DriverPage = () => {
                         {driver.current_number ?? '06'}
                     </div>
                     <div
-                        className={`absolute bottom-0 w-full h-1/5 bg-transparent rounded-br-md border-b-2 border-r-2 drop-shadow-team-${driver.current_team} drop-shadow-xl z-30`}
+                        className={`absolute bottom-0 w-full h-1/5 bg-transparent rounded-br-xl border-b-2 border-r-2 drop-shadow-team-${driver.current_team} drop-shadow-xl z-30`}
                     />
                 </div>
 
@@ -128,7 +131,7 @@ const DriverPage = () => {
             </div>
 
 
-            <div className="h-32"/>
+            <div className="h-48"/>
             {/* Spacer */}
 
             <h2 className="text-5xl font-fwide text-right px-8 md:px-64 w-full mb-8">
@@ -139,12 +142,30 @@ const DriverPage = () => {
   </span>
             </h2>
 
-            <section className="w-full flex justify-center items-center">
-                <div className={`border-b-2`}><CustomGraph driverId={driver.driver_id} height={600} width={1200}
-                                                           team={driver.current_team}/></div>
+            <section className="w-full flex flex-col justify-center items-center">
+                <div className="border-b-2">
+                    <CustomGraph
+                        driverId={driver.driver_id}
+                        height={600}
+                        width={1200}
+                        team={driver.current_team}
+                        season={season}
+                    />
+                </div>
 
-
+                <div className="w-full flex justify-center">
+                    <div className="w-[1200px] overflow-x-auto scrollbar-thin">
+                        <div className="flex gap-4 mb-4  min-w-fit">
+                            {driver.seasons_active.map((yr) => (
+                                <Button key={yr} active={season === yr} onClick={() => setSeason(yr)}>
+                                    {yr}
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             </section>
+
 
         </section>
     );

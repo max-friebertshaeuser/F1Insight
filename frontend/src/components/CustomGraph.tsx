@@ -16,6 +16,7 @@ export type GlyphProps = {
     margin?: typeof defaultMargin;
     driverId: string;
     team: string; // e.g., "mclaren", "ferrari"
+    season: number; // e.g., 2024
 };
 
 function getCssVar(varName: string) {
@@ -23,7 +24,7 @@ function getCssVar(varName: string) {
 }
 
 
-export default function CustomGraph({ width, height, margin = defaultMargin, driverId, team }: GlyphProps) {
+export default function CustomGraph({ width, height, margin = defaultMargin, driverId, team, season }: GlyphProps) {
 
     const [teamColor, setTeamColor] = useState<string>('');
     const [teamColorShaded, setTeamColorShaded] = useState<string>('');
@@ -38,10 +39,19 @@ export default function CustomGraph({ width, height, margin = defaultMargin, dri
 
     const backgroundColor = `#15151E`;
 
-    const season =2024; // or pass as prop
     const { data: races, loading, error } = useDriverStandings(driverId, season);
 
-    if (loading || width < 10) return <div>Loading…</div>;
+    if (loading || width < 10) {
+        return (
+            <div
+                style={{ width, height }}
+                className="bg-f1-black rounded-xl flex items-center justify-center text-white/30 font-fwide text-xl"
+            >
+                Loading graph...
+            </div>
+        );
+    }
+
     if (error) return <div>Error: {error}</div>;
 
     const resultData = races.map((r) => ({
