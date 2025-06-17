@@ -1,6 +1,7 @@
 import {useParams} from 'react-router-dom';
 import {useEffect, useState} from 'react';
 import {getTeamClass} from "../utils/formatTeamClass.ts";
+import CustomGraph from "../components/CustomGraph.tsx";
 
 interface DriverDetails {
     driver_id: string;
@@ -57,21 +58,22 @@ const DriverPage = () => {
     console.log('Driver details:', driver);
 
     const overallStats = [
-        { label: "Wins", value: driver.career_wins },
-        { label: "Points", value: driver.career_points },
-        { label: "Podiums", value: driver.career_podiums },
-        { label: "Poles", value: driver.career_poles },
+        {label: "Wins", value: driver.career_wins},
+        {label: "Points", value: driver.career_points},
+        {label: "Podiums", value: driver.career_podiums},
+        {label: "Poles", value: driver.career_poles},
     ];
 
     const currentStats = [
-        { label: "Wins", value: driver.current_season_wins },
-        { label: "Points", value: driver.current_season_points },
-        { label: "Podiums", value: driver.current_season_podiums },
-        { label: "Poles", value: driver.current_season_poles },
+        {label: "Wins", value: driver.current_season_wins},
+        {label: "Points", value: driver.current_season_points},
+        {label: "Podiums", value: driver.current_season_podiums},
+        {label: "Poles", value: driver.current_season_poles},
     ];
 
     return (
-        <div className="min-h-screen w-screen bg-f1-black text-f1-white font-fregular p-8 pt-20 flex flex-col items-center overflow-x-hidden">
+        <section
+            className="min-h-screen w-screen bg-f1-black text-f1-white font-fregular p-8 pt-20 flex flex-col items-center overflow-x-hidden">
             <h1 className="text-5xl font-fwide text-right px-8 md:px-64">
                 <span className="block text-left">{driver.forename}</span>
                 <span
@@ -96,25 +98,26 @@ const DriverPage = () => {
                 </div>
 
 
-
                 <div className="grid grid-cols-[1fr_auto_1fr] gap-4 text-xl font-fwide items-center">
                     <div className="pr-4">
                         <h2 className="text-2xl border-f1-white inline-block mb-4 text-left">Overall</h2>
                         {overallStats.map((stat) => (
                             <div key={stat.label} className="grid grid-cols-[2fr_1fr] gap-8 mb-4">
-                                <span className={`text-4xl text-team-${driver.current_team} text-right`}>{stat.value}</span>
+                                <span
+                                    className={`text-4xl text-team-${driver.current_team} text-right`}>{stat.value}</span>
                                 <span className="text-white/80 text-left font-fregular">{stat.label}</span>
                             </div>
                         ))}
                     </div>
 
-                    <div className="h-full border-r border-f1-white mx-auto w-px" />
+                    <div className="h-full border-r border-f1-white mx-auto w-px"/>
 
                     <div className="text-left pl-4">
                         <h2 className="text-2xl border-f1-white inline-block mb-4">Current</h2>
                         {currentStats.map((stat) => (
                             <div key={stat.label} className="grid grid-cols-2 gap-8 mb-4">
-                                <span className={`text-4xl text-team-${driver.current_team} text-right`}>{stat.value}</span>
+                                <span
+                                    className={`text-4xl text-team-${driver.current_team} text-right`}>{stat.value}</span>
                                 <span className="text-white/80 text-left font-fregular">{stat.label}</span>
                             </div>
                         ))}
@@ -122,9 +125,28 @@ const DriverPage = () => {
                 </div>
 
 
-
             </div>
-        </div>
+
+
+            <div className="h-32"/>
+            {/* Spacer */}
+
+            <h2 className="text-5xl font-fwide text-right px-8 md:px-64 w-full mb-8">
+                <span className="block text-left">Season</span>
+                <span
+                    className={`text-8xl font-fwide text-white text-right drop-shadow-team-${driver.current_team} drop-shadow-xl`}>
+    Performance
+  </span>
+            </h2>
+
+            <section className="w-full flex justify-center items-center">
+                <div className={`border-b-2`}><CustomGraph driverId={driver.driver_id} height={600} width={1200}
+                                                           team={driver.current_team}/></div>
+
+
+            </section>
+
+        </section>
     );
 };
 

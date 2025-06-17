@@ -41,7 +41,7 @@ function App() {
                 <div className="hover:border-team-astonmartin drop-shadow-team-astonmartin text-team-astonmartin"></div>
                 <div className="hover:border-team-alpine drop-shadow-team-alpine text-team-alpine"></div>
                 <div className="hover:border-team-williams drop-shadow-team-williams text-team-williams"></div>
-                <div className="hover:border-team-alfa drop-shadow-team-alfa text-team-alfa"></div>
+                <div className="hover:border-team-sauber drop-shadow-team-sauber text-team-sauber"></div>
                 <div className="hover:border-team-haas drop-shadow-team-haas text-team-haas"></div>
                 <div className="hover:border-team-racingbull drop-shadow-team-racingbull text-team-racingbull"></div>
             </div>
