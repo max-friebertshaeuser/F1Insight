@@ -213,9 +213,27 @@ def remove_group(request):
 @api_view(["GET"])
 def show_all_races_to_bet(request):
     today = date.today()
-    races = Race.objects.filter(date__gte=today).order_by('date')
-    race_data = [{"id": r.date, "season": r.season.season, "circuit": r.circuit.name, "date": r.date} for r in races]
-    return JsonResponse(race_data, safe=False)
+    next_race = (
+        Race.objects
+        .filter(date__gte=today)
+        .order_by('date')
+        .select_related('season', 'circuit')
+        .first()
+    )
+
+    if not next_race:
+        return JsonResponse(
+            {'error': 'No upcoming races found.'},
+            status=404
+        )
+
+    data = {
+        'id': next_race.date,
+        'season': next_race.season.season,
+        'circuit': next_race.circuit.name,
+        'date': next_race.date,
+    }
+    return JsonResponse(data)
 
 
 @swagger_auto_schema(
