@@ -36,6 +36,10 @@ class Bet(models.Model):
     bet_fastest_lap = models.ForeignKey(Driver, related_name='fastest_lap_bets', on_delete=models.SET_NULL,
                                         null=True, blank=True)
 
+    evaluated = models.BooleanField(
+        default=False,
+    )
+
     bet_top_3 = models.ManyToManyField(
         Driver,
         through='BetTop3',
