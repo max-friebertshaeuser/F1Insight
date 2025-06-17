@@ -52,3 +52,41 @@
   --color-team-haas: #B6BABD;
   --color-team-racingbull: #6C98FF;
 }
+
+
+
+.text-outline {
+  -webkit-text-stroke-width: 2px;
+  color: transparent;
+}
+
+.text-outline-team-mercedes {
+  -webkit-text-stroke-color: var(--color-team-mercedes);
+}
+.text-outline-team-redbull {
+  -webkit-text-stroke-color: var(--color-team-redbull);
+}
+.text-outline-team-ferrari {
+  -webkit-text-stroke-color: var(--color-team-ferrari);
+}
+.text-outline-team-mclaren {
+  -webkit-text-stroke-color: var(--color-team-mclaren);
+}
+.text-outline-team-astonmartin {
+  -webkit-text-stroke-color: var(--color-team-astonmartin);
+}
+.text-outline-team-alpine {
+  -webkit-text-stroke-color: var(--color-team-alpine);
+}
+.text-outline-team-williams {
+  -webkit-text-stroke-color: var(--color-team-williams);
+}
+.text-outline-team-sauber {
+  -webkit-text-stroke-color: var(--color-team-sauber);
+}
+.text-outline-team-haas {
+  -webkit-text-stroke-color: var(--color-team-haas);
+}
+.text-outline-team-racingbull {
+  -webkit-text-stroke-color: var(--color-team-racingbull);
+}

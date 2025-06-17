@@ -10,7 +10,6 @@ const DriverCard = ({driver}: { driver: Partial<Driver> }) => {
         }
     };
 
-    console.log('DriverCard rendered for:', driver.driver_id, 'teamname:', driver.team);
 
     return (
         <div
@@ -26,7 +25,7 @@ const DriverCard = ({driver}: { driver: Partial<Driver> }) => {
             </div>
 
             <div className="relative w-full flex justify-center items-center">
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 text-8xl font-fregular text-team-mclaren opacity-40 pointer-events-none">
+                <div className={`absolute md:left-2 top-1/2 -translate-y-1/2 text-8xl font-fregular md:tracking-[.5em] text-team-${driver.team} opacity-40 pointer-events-none`}>
                     {driver.driverNumber}
                 </div>
                 <img

@@ -37,6 +37,7 @@ const DriversPage = () => {
                 console.log('Fetched drivers:', data);
                 data = data.map(driver => {
                     driver.team = getTeamClass(driver.team ?? '');
+                    driver.driverNumber = (driver as any)['number'];
                     return driver;
 
                 }).sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
@@ -63,7 +64,6 @@ const DriversPage = () => {
     const firstRow = drivers.slice(0, 3);
     const restRows = drivers.slice(3);
 
-    console.log('Drivers:', drivers);
     return (
         <div className="overflow-auto min-h-screen bg-f1-black text-f1-white font-fregular p-4 flex justify-center">
             <div className="w-full max-w-7xl">

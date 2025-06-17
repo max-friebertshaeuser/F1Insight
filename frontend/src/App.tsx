@@ -34,17 +34,18 @@ function App() {
             </main>
             {/* !!clean coding!! */}
             <div className="h-0 w-0 overflow-hidden">
-                <div className="hover:border-team-mercedes"></div>
-                <div className="hover:border-team-redbull"></div>
-                <div className="hover:border-team-ferrari"></div>
-                <div className="hover:border-team-mclaren"></div>
-                <div className="hover:border-team-astonmartin"></div>
-                <div className="hover:border-team-alpine"></div>
-                <div className="hover:border-team-williams"></div>
-                <div className="hover:border-team-sauber"></div>
-                <div className="hover:border-team-haas"></div>
-                <div className="hover:border-team-racingbull"></div>
+                <div className="hover:border-team-mercedes drop-shadow-team-mercedes text-team-mercedes"></div>
+                <div className="hover:border-team-redbull drop-shadow-team-redbull text-team-redbull"></div>
+                <div className="hover:border-team-ferrari drop-shadow-team-ferrari text-team-ferrari"></div>
+                <div className="hover:border-team-mclaren drop-shadow-team-mclaren text-team-mclaren"></div>
+                <div className="hover:border-team-astonmartin drop-shadow-team-astonmartin text-team-astonmartin"></div>
+                <div className="hover:border-team-alpine drop-shadow-team-alpine text-team-alpine"></div>
+                <div className="hover:border-team-williams drop-shadow-team-williams text-team-williams"></div>
+                <div className="hover:border-team-alfa drop-shadow-team-alfa text-team-alfa"></div>
+                <div className="hover:border-team-haas drop-shadow-team-haas text-team-haas"></div>
+                <div className="hover:border-team-racingbull drop-shadow-team-racingbull text-team-racingbull"></div>
             </div>
+
         </Router>
     );
 }
