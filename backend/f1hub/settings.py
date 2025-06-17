@@ -135,6 +135,7 @@ SWAGGER_SETTINGS = {
 CRONJOBS = [
     # alle 3 Stunden um Minute 0
     ('0 */3 * * *', 'django.core.management.call_command', ['populate_f1']),
+    ('0 */3 * * *', 'django.core.management.call_command', ['evaluate_bets']),
 ]
 
 # Internationalization
