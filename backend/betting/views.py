@@ -701,6 +701,34 @@ def get_last_5_drivers(request):
             "position": res.position,
             "points": res.points
         }
-        for res in reversed(drivers)  # optional: kleinste Position zuerst
+        for res in reversed(drivers)
     ]
     return JsonResponse(data, safe=False)
+
+@api_view(['Post'])
+@permission_classes([IsAuthenticated])
+def get_group_info(request):
+    group_id = request.data.get('group_id')
+    if not group_id:
+        return Response({'status': 'missing group_id'}, status=400)
+    try:
+        group = Group.objects.get(id=group_id)
+        bet_stats  = BetStat.objects.filter(group=group)
+        group_info = {
+            'group_id': group.id,
+            'group_name': group.name,
+            'owner': group.owner.username,
+            'bet_stats': [
+                {
+                    'user': bs.user.username,
+                    'points': bs.points
+                } for bs in bet_stats
+            ]
+        }
+        return Response(group_info)
+
+    except Group.DoesNotExist:
+        return Response({'status': 'group not found'}, status=404)
+
+
+
