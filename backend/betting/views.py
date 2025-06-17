@@ -1,3 +1,6 @@
+import uuid
+from uuid import UUID
+
 from django.utils import timezone
 from django.contrib.auth.models import User
 from drf_yasg.utils import swagger_auto_schema
@@ -39,6 +42,7 @@ def create_group(request):
     owner_username = request.data.get('name')
     group_name = request.data.get('group_name')
     created_at = timezone.now()
+    join_id = uuid.uuid4()
     if not owner_username or not group_name:
         return Response({'status': 'missing required fields'}, status=400)
     try:
@@ -50,10 +54,10 @@ def create_group(request):
         return Response({'status': 'group already exists'}, status=400)
 
     try:
-        group = Group.objects.create(owner=owner, name=group_name, created_at=created_at)
+        group = Group.objects.create(owner=owner, name=group_name, created_at=created_at, join_id=join_id)
         BetStat.objects.create(user=owner, group=group)
         group.save()
-        return Response({'status': 'group created', 'group_id': group.id})
+        return Response({'status': 'group created', 'group_id': group.id, 'join_link': str(join_id)})
     except Exception as e:
         return Response({'status': 'error', 'detail': str(e)}, status=500)
 
@@ -65,26 +69,30 @@ def create_group(request):
         type=openapi.TYPE_OBJECT,
         properties={
             'group_name': openapi.Schema(type=openapi.TYPE_STRING, description='Name of the group'),
+            'join_id': openapi.Schema(type=openapi.TYPE_STRING, description='Join ID of the group'),
         },
-        required=['group_name'],
+        required=['group_name', 'join_id'],
     ),
     responses={
         200: openapi.Response('joined group successfully'),
-        404: openapi.Response('group not found'),
+        400: openapi.Response('missing required fields'),
+        404: openapi.Response('group not found or invalid join id'),
     }
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def join_group(request):
     group_name = request.data.get('group_name')
-
+    join_id = request.data.get('join_id')
+    if not group_name or not join_id:
+        return Response({'status': 'missing required fields'}, status=400)
     try:
-        group = Group.objects.get(name=group_name)
+        group = Group.objects.get(name=group_name, join_id=join_id)
     except Group.DoesNotExist:
-        return Response({'status': 'group not found'}, status=404)
+        return Response({'status': 'group not found or invalid join id'}, status=404)
 
     user = request.user
-    betstat, created = BetStat.objects.get_or_create(user=user, group=group)
+    _, created = BetStat.objects.get_or_create(user=user, group=group)
 
     return Response({'status': 'joined group successfully'})
 
