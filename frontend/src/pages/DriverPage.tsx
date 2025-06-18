@@ -151,6 +151,7 @@ const DriverPage = () => {
                         width={1200}
                         team={driver.current_team}
                         season={season}
+                        driverName={driver.surname}
                     />
                 </div>
 
@@ -185,6 +186,7 @@ const DriverPage = () => {
                         team={driver.current_team}
                         width={1200}
                         height={600}
+                        driverName={driver.surname}
                     />
 
                 </div>

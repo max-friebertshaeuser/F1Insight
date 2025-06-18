@@ -20,7 +20,7 @@ export function useDriverStandings(driverId: string, season: number) {
                 const res = await fetch('http://localhost:8000/api/catalog/driver/getstandings', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', accept: 'application/json' },
-                    body: JSON.stringify({ driver_id: driverId, season }),
+                    body: JSON.stringify({ driver_id: driverId, season: season.toString() }),
                 });
 
                 if (!ignore) {
@@ -31,6 +31,7 @@ export function useDriverStandings(driverId: string, season: number) {
                         .sort((a: RaceResult, b: RaceResult) => a.round - b.round);
 
                     setData(sorted);
+                    console.log('Fetched driver standings:', sorted);
                 }
             } catch (e: any) {
                 if (!ignore) setError(e.message);
