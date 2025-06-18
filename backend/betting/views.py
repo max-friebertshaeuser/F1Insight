@@ -83,11 +83,11 @@ def create_group(request):
 @permission_classes([IsAuthenticated])
 def join_group(request):
     group_name = request.data.get('group_name')
-    join_id = request.data.get('join_id')
-    if not group_name or not join_id:
+    #join_id = request.data.get('join_id')
+    if not group_name:
         return Response({'status': 'missing required fields'}, status=400)
     try:
-        group = Group.objects.get(name=group_name, join_id=join_id)
+        group = Group.objects.get(name=group_name)
     except Group.DoesNotExist:
         return Response({'status': 'group not found or invalid join id'}, status=404)
 
@@ -174,7 +174,7 @@ def get_all_groups(request):
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
-            'group_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID der Gruppe'),
+            'name': openapi.Schema(type=openapi.TYPE_INTEGER, description='name der Gruppe'),
         },
         required=['group_id'],
     ),
