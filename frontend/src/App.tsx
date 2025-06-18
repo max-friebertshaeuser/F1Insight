@@ -9,10 +9,21 @@ import DriverPage from "./pages/DriverPage.tsx"; // Ensure you have your CSS fil
 import Login from "./pages/Login.tsx";
 import Register from "./pages/Register.tsx";
 import PrivateRoute from "./types/PrivateRoute.tsx";
-import BettingGame from "./pages/BettingGame.tsx";
+import BettingGame from "./pages/BettingGame/BettingGame.tsx";
 import Logout from "./pages/Logout.tsx";
 import TeamsPage from "./pages/TeamsPage.tsx";
 import TeamDetailPage from "./pages/TeamDetailPage.tsx";
+import GroupsList from "./pages/BettingGame/GroupsList.tsx";
+import CreateGroup from "./pages/BettingGame/CreateGroup.tsx";
+import Bottom5After from "./pages/BettingGame/Bottom5After.tsx";
+import Bottom5Before from "./pages/BettingGame/Bottom5Before.tsx";
+import DeleteBet from "./pages/BettingGame/DeleteBet.tsx";
+import GroupInfo from "./pages/BettingGame/GroupInfo.tsx";
+import JoinGroup from "./pages/BettingGame/JoinGroup.tsx";
+import SetBet from "./pages/BettingGame/SetBet.tsx";
+import ShowBet from "./pages/BettingGame/ShowBet.tsx";
+import UpdateBet from "./pages/BettingGame/UpdateBet.tsx";
+import LeaveGroup from "./pages/BettingGame/LeaveGroup.tsx";
 
 function App() {
     return (
@@ -34,6 +45,17 @@ function App() {
                     <Route path="/driver/:id" element={<DriverPage />} />
                     <Route path="/team/:id" element={<TeamDetailPage />} />
                     <Route path="*" element={<NotFoundPage />} />
+                    <Route path="/groups/create" element={<CreateGroup />} />
+                    <Route path="/groups/join" element={<JoinGroup />} />
+                    <Route path="/groups" element={<GroupsList />} />
+                    <Route path="/groups/:groupId" element={<GroupInfo />} />
+                    <Route path="/bets/create" element={<SetBet />} />
+                    <Route path="/bets/:race_id/show" element={<ShowBet />} />
+                    <Route path="/bets/:race_id/update" element={<UpdateBet />} />
+                    <Route path="/bets/:race_id/delete" element={<DeleteBet />} />
+                    <Route path="/bets/bottom5-before" element={<Bottom5Before />} />
+                    <Route path="/bets/bottom5-after" element={<Bottom5After />} />
+                    <Route path="/groups/leave" element={<LeaveGroup />} />
                 </Routes>
             </main>
             {/* !!clean coding!! */}

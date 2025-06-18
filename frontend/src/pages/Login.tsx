@@ -37,7 +37,7 @@ useEffect(() => {
       const data = await response.json();
 
       // ✅ Tokens über den Context setzen (nicht direkt localStorage!)
-      login(data.access, data.refresh);
+      login(username, data.access, data.refresh);
 
       // ✅ Weiterleitung (nachdem Context aktualisiert ist)
       navigate('/bettinggame', { replace: true });

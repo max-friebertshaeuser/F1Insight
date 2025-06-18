@@ -22,7 +22,7 @@ function Standings() {
 
         if (!response.ok) {
             const errData = await response.json();
-            throw new Error(errData.detail || 'Failed to sign up');
+            throw new Error(errData.username?.[0] || 'Failed to sign up');
         }
 
         const data = await response.json();

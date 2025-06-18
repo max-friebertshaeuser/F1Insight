@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState } from 'react';
 interface AuthContextType {
   accessToken: string | null;
   refreshToken: string | null;
-  login: (access: string, refresh: string) => void;
+  login: (username: string, access: string, refresh: string) => void;
   logout: () => void;
   isAuthenticated: boolean;
   refreshAccessToken: () => Promise<boolean>;
@@ -16,9 +16,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [accessToken, setAccessToken] = useState<string | null>(() => localStorage.getItem('access_token'));
   const [refreshToken, setRefreshToken] = useState<string | null>(() => localStorage.getItem('refresh_token'));
 
-  const login = (access: string, refresh: string) => {
+  const login = (user: string, access: string, refresh: string) => {
     setAccessToken(access);
     setRefreshToken(refresh);
+    localStorage.setItem('username', user)
     localStorage.setItem('access_token', access);
     localStorage.setItem('refresh_token', refresh);
   };
@@ -28,6 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setRefreshToken(null);
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    localStorage.removeItem('username')
   };
 
   const refreshAccessToken = async (): Promise<boolean> => {
