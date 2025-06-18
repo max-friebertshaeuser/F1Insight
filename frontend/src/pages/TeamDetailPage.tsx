@@ -1,8 +1,6 @@
 import {useParams} from 'react-router-dom';
 import {useEffect, useState} from 'react';
 import {getTeamClass} from "../utils/formatTeamClass.ts";
-import teamsPage from "./TeamsPage.tsx";
-import teamCard from "../components/TeamCard.tsx";
 
 interface DriverSummary {
     id: string;
@@ -87,25 +85,52 @@ const TeamDetailPage = () => {
             <h1 className="text-5xl font-fwide text-center px-8 md:px-64 mb-4">
                 <span className="block text-left">Team</span>
                 <span
-                    className={`text-8xl font-fwide text-white text-right drop-shadow-xl drop-shadow-team-${teamColorClass}`}>{data.team.name}</span>
+                    className={`text-8xl font-fwide text-white text-right drop-shadow-xl drop-shadow-team-${teamColorClass}`}>{data.team.name}
+                    </span>
+
             </h1>
 
             <div className="flex flex-col md:flex-row justify-center items-center gap-16 pb-8 mt-8">
-                <div className="relative flex justify-center px-4">
-                    <div className="flex -space-x-56">
-                        {data.current_season.drivers?.slice(0, 2).map((d) => (
-                            <img
-                                key={d.id}
-                                src={`/assets/driver-images/${d.id}.avif`}
-                                alt={`${d.forename} ${d.surname}`}
-                                className="w-128 p-1 z-10 relative drop-shadow-md "
-                            />
-                        ))}
+                <div className="relative flex flex-col items-center px-4">
+                    {/* Driver images with overlap */}
+                    <div className="relative flex justify-center w-full">
+                        <div className="flex -space-x-56 z-10">
+                            {data.current_season.drivers?.slice(0, 2).map((d) => (
+                                <img
+                                    key={d.id}
+                                    src={`/assets/driver-images/${d.id}.avif`}
+                                    alt={`${d.forename} ${d.surname}`}
+                                    className="w-96 p-1 relative drop-shadow-md"
+                                />
+                            ))}
+                        </div>
+
+                        {/* Stylish bottom bar */}
+                        <div
+                            className={`absolute bottom-0 w-full h-1/5 bg-transparent rounded-br-xl border-b-2 border-r-2 drop-shadow-team-${teamColorClass} drop-shadow-xl z-20`}
+                        />
                     </div>
-                    <div
-                        className={`absolute bottom-0 w-full h-1/5 bg-transparent rounded-br-xl border-b-2 border-r-2 drop-shadow-team-${teamColorClass} drop-shadow-xl z-30`}
-                    />
+
+                    {/* Names + logo under everything */}
+                    <div className="w-full flex justify-between items-center px-2 mt-4 z-30">
+                        <div className="text-2xl font-fbold">
+                            {data.current_season.drivers.slice(0, 2).map((d) => (
+                                <div key={d.id}>
+                                    <span className="text-base font-fregular">{d.forename}</span> {d.surname}
+                                </div>
+                            ))}
+                        </div>
+
+
+
+                        <img
+                            src={`/assets/team-images/${data.team.id}.avif`}
+                            alt={data.team.name}
+                            className="w-10 h-10 ml-auto border border-f1-white"
+                        />
+                    </div>
                 </div>
+
 
                 <div className="grid grid-cols-[1fr_auto_1fr] gap-4 text-xl font-fwide items-center">
                     <div className="pr-4">
