@@ -6,6 +6,7 @@ urlpatterns = [
     path('init', views.get_init, name='get_init'),
 
     path('getcurrentdrivers', views.get_current_drivers, name='get_current_drivers'),
+    path('getcurrentteams', views.get_current_teams, name='get_current_teams'),
 
     path('driver/detailedview', views.detailed_driver_view, name='detailed_driver_view'),
     path('driver/getboxplot', views.get_driver_box_plot, name='get_box_plot'),
