@@ -691,6 +691,7 @@ def get_team_standings(request):
         for r in qs:
             standings.append({
                 "driver": f"{r.driver.forename} {r.driver.surname}",
+                "driver_id": r.driver.driver,
                 "round": race.round,
                 "position": r.pos_int,
             })
@@ -825,6 +826,7 @@ def insight_driver_standings(request):
     for s in qs:
         data.append({
             "driver": f"{s.driver.forename} {s.driver.surname}",
+            "driver_id": s.driver.driver,
             "nationality": s.driver.nationality,
             "team": s.constructor.name,
             "position": s.positionText,
@@ -872,6 +874,7 @@ def insight_team_standings(request):
     for s in qs:
         data.append({
             "team": s.constructor.name,
+            "team_id": s.constructor.constructor,
             "position": s.positionText,
             "points": s.points,
         })
