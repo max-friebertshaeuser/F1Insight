@@ -3,6 +3,7 @@ import {useEffect, useState} from 'react';
 import {getTeamClass} from "../utils/formatTeamClass.ts";
 import CustomGraph from "../components/CustomGraph.tsx";
 import Button from "../components/Button.tsx";
+import CustomBoxplot from "../components/CustomBoxplot.tsx";
 
 interface DriverDetails {
     driver_id: string;
@@ -167,7 +168,35 @@ const DriverPage = () => {
             </section>
 
 
+            <section
+                className="min-h-screen w-full bg-f1-black text-f1-white font-fregular p-8 pt-20 flex flex-col items-center">
+                <h2 className="text-5xl font-fwide text-right px-8 md:px-64 w-full mb-8">
+                    <span className="block text-left">Season</span>
+                    <span className="text-8xl font-fwide text-white text-right drop-shadow-xl">
+      Comparison
+    </span>
+                </h2>
+
+                <div className="border-b-2 w-[1200px] mb-16 flex justify-center">
+                    {/* Placeholder box to match the upcoming CustomBoxplot's dimensions */}
+                    <div className="w-full h-[600px] bg-f1-black rounded-xl"/>
+                </div>
+
+                <div className="w-[1200px]">
+                    <CustomBoxplot
+                        driverId={driver.driver_id}
+                        team={driver.current_team}
+                        width={1200}
+                        height={600}
+                    />
+
+                </div>
+            </section>
+
+
         </section>
+
+
     );
 };
 
