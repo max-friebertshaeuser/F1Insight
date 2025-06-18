@@ -7,8 +7,10 @@ import logo from '../assets/logo.svg';
 const navRoutes = [
     { name: 'Standings', path: '/standings' },
     { name: 'Drivers', path: '/drivers' },
+    { name: 'Teams', path: '/teams' },
     { name: 'Comparison', path: '/comparison' },
     { name: 'Betting Game', path: '/bettinggame' },
+
 ];
 
 const Navbar = () => {

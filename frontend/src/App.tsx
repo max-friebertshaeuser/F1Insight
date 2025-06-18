@@ -11,6 +11,8 @@ import Register from "./pages/Register.tsx";
 import PrivateRoute from "./types/PrivateRoute.tsx";
 import BettingGame from "./pages/BettingGame.tsx";
 import Logout from "./pages/Logout.tsx";
+import TeamsPage from "./pages/TeamsPage.tsx";
+import TeamDetailPage from "./pages/TeamDetailPage.tsx";
 
 function App() {
     return (
@@ -27,8 +29,10 @@ function App() {
                     <Route path="/register" element={<Register />} />
                     <Route path="/drivers" element={<DriversPage/>} />
                     <Route path="/bettinggame" element={<PrivateRoute><BettingGame /></PrivateRoute>} />
+                    <Route path="/teams" element={<TeamsPage />} />
                     {/* Add more pages here */}
                     <Route path="/driver/:id" element={<DriverPage />} />
+                    <Route path="/team/:id" element={<TeamDetailPage />} />
                     <Route path="*" element={<NotFoundPage />} />
                 </Routes>
             </main>
