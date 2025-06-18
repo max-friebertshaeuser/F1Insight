@@ -140,6 +140,69 @@ def get_current_drivers(request):
 
 @swagger_auto_schema(
     method='post',
+    operation_summary="Aktuelle Teams abrufen",
+    operation_description="Gibt eine Liste der Teams der aktuellen Saison zurück.",
+    responses={200: openapi.Response('Liste der Teams')}
+)
+@api_view(['POST'])
+def get_current_teams(request):
+    """
+    Returns a list of current-season teams with:
+      - team_id
+      - name
+      - nationality
+      - points
+      - position
+      - drivers: list of drivers in that team this season
+    """
+    # 1. Aktuelle Saison bestimmen
+    latest_season = (
+        Season.objects
+        .annotate(as_int=Cast('season', IntegerField()))
+        .order_by('-as_int')
+        .first()
+    )
+    if not latest_season:
+        return JsonResponse({'error': "Database has no season"}, status=404)
+
+    # 2. Alle Constructorstandings der aktuellen Saison laden
+    standings_qs = Constructorstanding.objects.filter(
+        season=latest_season
+    ).select_related('constructor')
+
+    teams_data = []
+    for standing in standings_qs:
+        team = standing.constructor
+
+        # 3. Fahrer dieses Teams in der aktuellen Saison
+        driver_teams = DriverTeam.objects.filter(
+            season=latest_season,
+            constructor=team
+        ).select_related('driver')
+
+        drivers = []
+        for dt in driver_teams:
+            d = dt.driver
+            drivers.append({
+                'driver_id': f"{d.driver}",
+                'forename':  d.forename,
+                'surname':   d.surname,
+                'number':    dt.driver_season_number,
+            })
+
+        teams_data.append({
+            'team_id':     team.constructor,
+            'name':        team.name,
+            'nationality': team.nationality,
+            'points':      standing.points,
+            'position':    standing.positionText,
+            'drivers':     drivers,
+        })
+
+    return JsonResponse({'teams': teams_data})
+
+@swagger_auto_schema(
+    method='post',
     operation_summary="Detaillierte Fahrerdaten",
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
@@ -286,16 +349,15 @@ def get_driver_box_plot(request):
         return JsonResponse({"error": "Required field: driver_id"}, status=400)
 
     # 1) Neueste Saison im System ermitteln
-    latest_season = (
+    latest = (
         Season.objects
         .annotate(as_int=Cast('season', IntegerField()))
         .order_by('-as_int')
         .first()
     )
-    if not latest_season:
+    if not latest:
         return JsonResponse({"error": "No seasons defined"}, status=500)
-
-    max_year = int(latest_season.season)
+    max_year = int(latest.season)
 
     # 2) Driver lookup
     try:
@@ -304,59 +366,45 @@ def get_driver_box_plot(request):
         return JsonResponse({"error": f"No driver found with id {driver_id}"}, status=404)
 
     # 3) Alle Saisons als ints ≤ max_year, absteigend
-    raw_seasons = Season.objects.values_list('season', flat=True)
-    candidate_years = []
-    for s in raw_seasons:
-        try:
-            y = int(s)
-        except ValueError:
-            continue
-        if y <= max_year:
-            candidate_years.append(y)
-    candidate_years = sorted(set(candidate_years), reverse=True)
+    years = sorted(
+        (int(s) for s in Season.objects.values_list('season', flat=True) if s.isdigit()),
+        reverse=True
+    )
+    years = [y for y in years if y <= max_year][:4]
 
-    # 4) Filter nur Saisons, in denen der Fahrer tatsächlich gestartet ist
-    seasons_with_results = []
-    for y in candidate_years:
-        if Result.objects.filter(
-                date__season__season=str(y),
-                driver=driver
-        ).exists():
-            seasons_with_results.append(y)
-        if len(seasons_with_results) >= 4:
-            break
-
-    # 5) Für jede Saison Boxplot‐Statistiken berechnen
     boxplots = []
-    for y in seasons_with_results:
+    for y in years:
         season = Season.objects.get(season=str(y))
 
-        # alle Positionen dieses Fahrers in dieser Saison
-        qs = (
+        # 4) Alle Platzierungen dieses Fahrers in dieser Saison abrufen
+        raw_qs = (
             Result.objects
             .filter(date__season=season, driver=driver)
-            .annotate(
-                pos_int=Case(
-                    When(position__regex=r'^\d+$', then=Cast('position', IntegerField())),
-                    default=Value(9999),
-                    output_field=IntegerField(),
-                )
-            )
-            .values_list('pos_int', flat=True)
+            .values_list('position', flat=True)
         )
-        positions = [p for p in qs if p < 9999]
+        # zuerst als ints, blinde Einträge rauswerfen
+        positions_int = []
+        for pos in raw_qs:
+            try:
+                pi = int(pos)
+            except (ValueError, TypeError):
+                continue
+            positions_int.append(pi)
 
-        if not positions:
+        if not positions_int:
             continue
 
-        positions.sort()
+        # für Percentile-Sortierung
+        sorted_pos = sorted(positions_int)
+
         boxplots.append({
-            "x": y,
-            "min": positions[0],
-            "firstQuartile": _percentile(positions, 25),
-            "median": _percentile(positions, 50),
-            "thirdQuartile": _percentile(positions, 75),
-            "max": positions[-1],
+            "x":             y,
+            "positions":     positions_int,                # <— die rohe Serie [1,4,2,1,1,3,…]
+            "min":           sorted_pos[0],
+            "firstQuartile": _percentile(sorted_pos, 25),
+            "median":        _percentile(sorted_pos, 50),
+            "thirdQuartile": _percentile(sorted_pos, 75),
+            "max":           sorted_pos[-1],
         })
 
     return JsonResponse({"boxPlots": boxplots})
@@ -673,92 +721,69 @@ def get_team_box_plot(request):
     if not team_id:
         return JsonResponse({"error": "Required field: team_id"}, status=400)
 
-    # 1) Ermitteln der neuesten Saison im System
-    latest_season = (
+    # 1) Latest season
+    latest = (
         Season.objects
         .annotate(as_int=Cast('season', IntegerField()))
         .order_by('-as_int')
         .first()
     )
-    if not latest_season:
+    if not latest:
         return JsonResponse({"error": "No seasons defined"}, status=500)
+    max_year = int(latest.season)
 
-    max_year = int(latest_season.season)
-
-    # 2) Team-Lookup
+    # 2) Team lookup
     try:
         team = Constructor.objects.get(pk=team_id)
     except Constructor.DoesNotExist:
         return JsonResponse({"error": f"No team found with id {team_id}"}, status=404)
 
-    # 3) Alle Saisons als ints sammeln, ≤ max_year, absteigend
-    raw_seasons = Season.objects.values_list('season', flat=True)
-    candidate_years = []
-    for s in raw_seasons:
-        try:
-            y = int(s)
-        except ValueError:
-            continue
-        if y <= max_year:
-            candidate_years.append(y)
-    candidate_years = sorted(set(candidate_years), reverse=True)
+    # 3) Candidate years ≤ max_year, desc
+    candidate = sorted(
+        (int(s) for s in Season.objects.values_list('season', flat=True) if s.isdigit() and int(s) <= max_year),
+        reverse=True
+    )
 
-    # 4) Filtere nur jene Saisons, in denen das Team wirklich gestartet ist
+    # 4) Only years with results, up to 4
     seasons_with_results = []
-    for y in candidate_years:
-        # existiert mindestens ein Result für team in Saison y?
-        if Result.objects.filter(
-                date__season__season=str(y),
-                constructor=team
-        ).exists():
+    for y in candidate:
+        if Result.objects.filter(date__season__season=str(y), constructor=team).exists():
             seasons_with_results.append(y)
         if len(seasons_with_results) >= 4:
             break
 
-    # 5) Für jede gefundene Saison Boxplot‐Statistiken berechnen
+    # 5) Compute boxplots
     boxplots = []
     for y in seasons_with_results:
         season = Season.objects.get(season=str(y))
 
-        # IDs der Fahrer dieses Teams in Saison y
-        driver_ids = list(
-            DriverTeam.objects
-            .filter(season=season, constructor=team)
-            .values_list('driver_id', flat=True)
-        )
+        # gather all raw positions for this team in that season
+        raw_positions = []
+        for race in Race.objects.filter(season=season):
+            qs = Result.objects.filter(
+                date=race, constructor=team
+            ).values_list('position', flat=True)
+            for pos in qs:
+                try:
+                    pi = int(pos)
+                except (ValueError, TypeError):
+                    continue
+                raw_positions.append(pi)
 
-        # alle Rennpositionen dieser Fahrer in dieser Saison sammeln
-        positions = []
-        races = Race.objects.filter(season=season)
-        for race in races:
-            qs = (
-                Result.objects
-                .filter(date=race, constructor=team, driver_id__in=driver_ids)
-                .annotate(
-                    pos_int=Case(
-                        When(position__regex=r'^\d+$',
-                             then=Cast('position', IntegerField())),
-                        default=Value(9999),
-                        output_field=IntegerField(),
-                    )
-                )
-                .values_list('pos_int', flat=True)
-            )
-            positions.extend(p for p in qs if p < 9999)
+        if not raw_positions:
+            continue
 
-        # falls Positionen gefunden wurden, sortieren und Quartile berechnen
-        if positions:
-            positions.sort()
-            boxplots.append({
-                "x": y,
-                "min": positions[0],
-                "firstQuartile": _percentile(positions, 25),
-                "median": _percentile(positions, 50),
-                "thirdQuartile": _percentile(positions, 75),
-                "max": positions[-1],
-            })
+        sorted_pos = sorted(raw_positions)
+        boxplots.append({
+            "x":             y,
+            "positions":     raw_positions,                # raw list, e.g. [5,2,8,1,...]
+            "min":           sorted_pos[0],
+            "firstQuartile": _percentile(sorted_pos, 25),
+            "median":        _percentile(sorted_pos, 50),
+            "thirdQuartile": _percentile(sorted_pos, 75),
+            "max":           sorted_pos[-1],
+        })
 
-    # 6) Antwort
     return JsonResponse({"boxPlots": boxplots})
 
 @swagger_auto_schema(
@@ -805,8 +830,8 @@ def insight_driver_standings(request):
             "position": s.positionText,
             "points": s.points,
         })
-        data.sort(key=lambda x: int(x["position"]) if x["position"].isdigit() else 9999)
-    return JsonResponse(data)
+    data.sort(key=lambda x: int(x["position"]) if x["position"].isdigit() else 9999)
+    return JsonResponse(data, safe=False)
 
 
 @swagger_auto_schema(
@@ -850,9 +875,9 @@ def insight_team_standings(request):
             "position": s.positionText,
             "points": s.points,
         })
-        data.sort(key=lambda x: int(x["position"]) if x["position"].isdigit() else 9999)
+    data.sort(key=lambda x: int(x["position"]) if x["position"].isdigit() else 9999)
 
-    return JsonResponse(data)
+    return JsonResponse(data, safe=False)
 
 
 def _percentile(data, percent):
