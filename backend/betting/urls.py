@@ -12,7 +12,8 @@ from .views import (
     update_bet,
     get_last_5_drivers_before,
     get_last_5_drivers,
-    get_group_info
+    get_group_info,
+    get_bet_info
 )
 
 urlpatterns = [
@@ -28,6 +29,8 @@ urlpatterns = [
     path('bets/<str:race_id>/show/', show_bet, name='show_bet'),
     path('bets/<str:race_id>/delete/', delete_bet, name='delete_bet'),
     path('bets/<str:race_id>/update/', update_bet, name='update_bet'),
+    path('bets/info/', get_bet_info, name='get_bet_info'),
+
     path('bets/standings/bottom5-before-choice/', get_last_5_drivers_before,
          name='get_last_5_drivers_before'),
     path('bets/standings/bottom5-after-choice/', get_last_5_drivers,

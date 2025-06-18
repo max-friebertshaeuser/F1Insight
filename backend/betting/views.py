@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from drf_yasg import openapi
 
 from .models import Group, Bet, BetStat, BetTop3
-from catalog.models import Race, Driver, Driverstanding, Season, Result
+from catalog.models import Race, Driver, Driverstanding, Season, Result, DriverTeam
 import json
 from datetime import date, datetime
 from django.http import JsonResponse
@@ -614,6 +614,108 @@ def update_bet(request, race_id):
         }
     }, status=status.HTTP_200_OK)
 
+race_param = openapi.Parameter(
+    'race',
+    openapi.IN_QUERY,
+    description="Date of the race to fetch info for (YYYY-MM-DD)",
+    type=openapi.TYPE_STRING,
+    required=True
+)
+@swagger_auto_schema(
+    method='get',
+    operation_summary="Get Bet Info",
+    operation_description=(
+        "Returns lists of drivers for betting:\n"
+        "- `top3`: the first three finishers of the given race\n"
+        "- `last5`: drivers who finished in the last 5 of the previous race\n"
+        "- `mid5`: drivers in positions 6–10 of the previous race\n"
+        "- `fastest_options`: all drivers participating in the given race"
+    ),
+    manual_parameters=[race_param],
+    responses={
+        400: openapi.Response("Missing or invalid `race` parameter"),
+        404: openapi.Response("Race or previous race not found")
+    }
+)
+@api_view(["GET"])
+def get_bet_info(request):
+    """
+    Returns driver lists for betting UI:
+      - drivers: all current-season drivers (for top3 and fastest-lap selections)
+      - last5:   drivers who finished in the last 5 of a specified race
+      - mid5:    drivers who finished in positions 6-10 of that race
+    """
+    race_date = request.GET.get('race')
+    if not race_date:
+        return JsonResponse({'error': 'Missing required parameter: race (YYYY-MM-DD)'}, status=400)
+
+    # 1) Parse and lookup the target race
+    try:
+        date_obj = datetime.strptime(race_date, '%Y-%m-%d').date()
+        eval_race = Race.objects.get(date=date_obj)
+    except ValueError:
+        return JsonResponse({'error': 'Invalid date format, expected YYYY-MM-DD.'}, status=400)
+    except Race.DoesNotExist:
+        return JsonResponse({'error': f'Race {race_date} not found.'}, status=404)
+
+    # 2) Find the previous race by date
+    prev_race = (
+        Race.objects
+        .filter(date__lt=eval_race.date)
+        .order_by('-date')
+        .first()
+    )
+    if not prev_race:
+        return JsonResponse({'error': 'No previous race available.'}, status=404)
+
+    # 3) Current-season drivers for Top-3 & Fastest-lap
+    seasons = Season.objects.values_list('season', flat=True)
+    years = [int(s) for s in seasons if s.isdigit()]
+    if not years:
+        return JsonResponse({'error': 'No seasons defined.'}, status=500)
+    max_year = max(years)
+    latest_season = Season.objects.get(season=str(max_year))
+    driver_teams = DriverTeam.objects.filter(season=latest_season).select_related('driver')
+    drivers = [
+        {'driver_id': dt.driver.driver, 'name': f'{dt.driver.forename} {dt.driver.surname}'}
+        for dt in driver_teams
+    ]
+
+    # 4) Compute bottom-5 and 6–10 from the previous race
+    prev_results = Result.objects.filter(date=prev_race)
+    numeric_prev = []
+    for r in prev_results:
+        try:
+            pos = int(r.position)
+        except (ValueError, TypeError):
+            continue
+        numeric_prev.append((pos, r.driver.driver))
+    # sort descending (worst finishers first)
+    numeric_prev.sort(key=lambda x: x[0], reverse=True)
+
+    last5_codes = [code for _, code in numeric_prev[:5]]
+    mid5_codes = [code for _, code in numeric_prev[5:10]]
+
+    # 5) Map driver codes to full details
+    def map_codes(codes):
+        result = []
+        for code in codes:
+            d = Driver.objects.filter(driver=code).first()
+            if d:
+                result.append({
+                    'driver_id': d.driver,
+                    'name': f'{d.forename} {d.surname}'
+                })
+        return result
+
+    data = {
+        'race': race_date,
+        'drivers': drivers,
+        'last5': map_codes(last5_codes),
+        'mid5': map_codes(mid5_codes),
+    }
+    return JsonResponse(data)
+
 
 @swagger_auto_schema(
     method='get',
@@ -731,14 +833,55 @@ def get_last_5_drivers(request):
     ]
     return JsonResponse(data, safe=False)
 
+
+@swagger_auto_schema(
+    method='post',
+    operation_summary="Get Group Info",
+    operation_description="Returns details for a given group, including member standings.",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'group_name': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='Unique name of the group'
+            ),
+        },
+        required=['group_name'],
+    ),
+    responses={
+        200: openapi.Response(
+            description="Group info",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'group_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'group_name': openapi.Schema(type=openapi.TYPE_STRING),
+                    'owner': openapi.Schema(type=openapi.TYPE_STRING),
+                    'bet_stats': openapi.Schema(
+                        type=openapi.TYPE_ARRAY,
+                        items=openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'user': openapi.Schema(type=openapi.TYPE_STRING),
+                                'points': openapi.Schema(type=openapi.TYPE_INTEGER),
+                            }
+                        )
+                    ),
+                }
+            )
+        ),
+        400: openapi.Response(description="Missing group_name"),
+        404: openapi.Response(description="Group not found"),
+    }
+)
 @api_view(['Post'])
 @permission_classes([IsAuthenticated])
 def get_group_info(request):
-    group_id = request.data.get('group_id')
-    if not group_id:
+    group_name = request.data.get('group_name')
+    if not group_name:
         return Response({'status': 'missing group_id'}, status=400)
     try:
-        group = Group.objects.get(id=group_id)
+        group = Group.objects.get(name=group_name)
         bet_stats  = BetStat.objects.filter(group=group)
         group_info = {
             'group_id': group.id,
