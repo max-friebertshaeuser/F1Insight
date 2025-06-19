@@ -518,8 +518,8 @@ def update_bet(request, race_id):
 
     # 1) Pflichtfelder prüfen
     race_str = data.get("race")
-    group_id = data.get("group")
-    if not race_str or not group_id:
+    group_name = data.get("group")
+    if not race_str or not group_name:
         return JsonResponse(
             {"error": "Missing required field: 'race' or 'group'."},
             status=status.HTTP_400_BAD_REQUEST
@@ -551,10 +551,10 @@ def update_bet(request, race_id):
 
     # 4) Gruppe updaten
     try:
-        bet.group = Group.objects.get(id=group_id)
+        bet.group = Group.objects.get(name=group_name)
     except Group.DoesNotExist:
         return JsonResponse(
-            {"error": f"Group {group_id} not found."},
+            {"error": f"Group {group_name} not found."},
             status=status.HTTP_404_NOT_FOUND
         )
 
