@@ -1069,6 +1069,25 @@ def get_group_info(request):
         return Response({'status': 'group not found'}, status=404)
 
 
+@swagger_auto_schema(
+    method='post',
+    operation_summary="Ausgewertete Wetten und Punkte abrufen",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'group': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='Eindeutiger Gruppenname'
+            ),
+        },
+        required=['group'],
+    ),
+    responses={
+        200: openapi.Response('Liste der ausgewerteten Wetten und Gesamtstand der Gruppe'),
+        400: openapi.Response('Bad Request'),
+        404: openapi.Response('Gruppe nicht gefunden'),
+    }
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def get_evaluated_bets(request):
