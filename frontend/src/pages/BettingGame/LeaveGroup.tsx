@@ -20,7 +20,7 @@ const LeaveGroup: React.FC = () => {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.status || json.error || 'Fehler beim Verlassen');
-      navigate('/groups');
+      navigate('/bettinggame');
     } catch (err: any) {
       setError(err.message);
       setLoading(false);
@@ -31,7 +31,7 @@ const LeaveGroup: React.FC = () => {
     if (groupName) {
       navigate(`/groups/${groupName}`);
     } else {
-      navigate('/groups');
+      navigate('/bettinggame');
     }
   };
 

@@ -18,7 +18,7 @@ function CreateGroup() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.status || json.error || 'Error');
-      navigate('/groups');
+      navigate('/bettinggame');
     } catch (err) {
       setError(err.message);
     }
