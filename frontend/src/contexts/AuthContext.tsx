@@ -1,4 +1,3 @@
-// src/context/AuthContext.tsx
 import React, { createContext, useContext, useState } from 'react';
 
 interface AuthContextType {
@@ -40,7 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh: refreshToken }),
       });
-      if (!res.ok) throw new Error('Refresh fehlgeschlagen');
+      if (!res.ok) throw new Error('error while refreshing token');
       const data = await res.json();
       setAccessToken(data.access);
       localStorage.setItem('access_token', data.access);

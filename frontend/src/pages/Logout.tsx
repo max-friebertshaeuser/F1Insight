@@ -9,7 +9,6 @@ const Logout = () => {
     logout();
   }, [logout]);
 
-  // Nach dem Logout zur Login-Seite weiterleiten
   return <Navigate to="/login" replace />;
 };
 

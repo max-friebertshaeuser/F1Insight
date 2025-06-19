@@ -1,4 +1,3 @@
-// src/pages/LeaveGroup.tsx
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getAuthHeaders, API_BASE_GROUPS } from '../../utils/api';
@@ -19,7 +18,7 @@ const LeaveGroup: React.FC = () => {
         body: JSON.stringify({ group_name: groupName }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.status || json.error || 'Fehler beim Verlassen');
+      if (!res.ok) throw new Error(json.status || json.error || 'error while leaving group');
       navigate('/bettinggame');
     } catch (err: any) {
       setError(err.message);

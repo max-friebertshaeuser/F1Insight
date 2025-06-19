@@ -67,7 +67,7 @@ export default function GroupInfo() {
               2
             </div>
             <p className="mt-2">{second.user}</p>
-            <p className="text-sm text-gray-400">{second.points} Pkt.</p>
+            <p className="text-sm text-gray-400">{second.points} Pts.</p>
           </div>
         )}
         {first && (
@@ -76,7 +76,7 @@ export default function GroupInfo() {
               1
             </div>
             <p className="mt-2">{first.user}</p>
-            <p className="text-sm text-gray-400">{first.points} Pkt.</p>
+            <p className="text-sm text-gray-400">{first.points} Pts.</p>
           </div>
         )}
         {third && (
@@ -85,7 +85,7 @@ export default function GroupInfo() {
               3
             </div>
             <p className="mt-2">{third.user}</p>
-            <p className="text-sm text-gray-400">{third.points} Pkt.</p>
+            <p className="text-sm text-gray-400">{third.points} Pts.</p>
           </div>
         )}
       </div>
@@ -136,12 +136,6 @@ export default function GroupInfo() {
           className="px-6 py-2 bg-red-600 rounded-lg hover:bg-red-700 transition"
         >
           Leave group
-        </Link>
-        <Link
-          to="/bettinggame"
-          className="px-6 py-2 bg-gray-600 rounded-lg hover:bg-gray-500 transition"
-        >
-          Back to Betting Game Start
         </Link>
       </div>
     </div>

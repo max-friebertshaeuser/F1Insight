@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getAuthHeaders } from '../../utils/api';
 
@@ -50,10 +50,10 @@ export default function EvaluatedBetsTable() {
     })();
   }, [groupName]);
 
-  if (loading) return <p className="text-center mt-20 text-gray-400">⏳ Lade ausgewertete Tipps...</p>;
-  if (error) return <p className="text-center mt-20 text-red-500">❌ {error}</p>;
+  if (loading) return <p className="text-center mt-20 text-gray-400">Evaluated bets loading...</p>;
+  if (error) return <p className="text-center mt-20 text-red-500">{error}</p>;
   if (!data || data.bets.length === 0)
-    return <p className="text-center mt-20 text-gray-400">Keine ausgewerteten Tipps gefunden.</p>;
+    return <p className="text-center mt-20 text-gray-400">No evaluated bets found.</p>;
 
   const groupedByRace = data.bets.reduce<Record<string, Bet[]>>((acc, bet) => {
     if (!acc[bet.race]) acc[bet.race] = [];
@@ -64,7 +64,7 @@ export default function EvaluatedBetsTable() {
   return (
     <div className="bg-[#0D0D11] text-white min-h-screen px-4 py-12 sm:px-6 lg:px-12">
       <div className="max-w-7xl mx-auto">
-        <h2 className="text-4xl font-extrabold text-center mb-16 tracking-tight">Ausgewertete Tipps – Gruppe: {groupName}</h2>
+        <h2 className="text-4xl font-extrabold text-center mb-16 tracking-tight">Evaluated Bets – Group: {groupName}</h2>
 
         <div className="space-y-16">
           {Object.entries(groupedByRace)
@@ -74,18 +74,18 @@ export default function EvaluatedBetsTable() {
                 key={race}
                 className="bg-gradient-to-br from-[#1c1c2b] to-[#14141e] rounded-2xl shadow-xl ring-1 ring-gray-800 p-6 sm:p-8 backdrop-blur-sm"
               >
-                <h3 className="text-2xl font-semibold mb-6 text-white tracking-wide">🏁 Rennen: {race}</h3>
+                <h3 className="text-2xl font-semibold mb-6 text-white tracking-wide">🏁 Race: {race}</h3>
 
                 <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-700">
                   <table className="min-w-full text-sm sm:text-base text-left">
                     <thead className="bg-[#2A2A3A] text-gray-300 sticky top-0 z-10">
                       <tr>
-                        <th className="px-4 py-3">👤 Nutzer</th>
+                        <th className="px-4 py-3">👤 User</th>
                         <th className="px-4 py-3">🥇 Top 3</th>
-                        <th className="px-4 py-3">🔻 Letzte 5</th>
-                        <th className="px-4 py-3">🔻 Letzte 10</th>
-                        <th className="px-4 py-3">⚡ Schnellste Runde</th>
-                        <th className="px-4 py-3 text-right">⭐ Punkte</th>
+                        <th className="px-4 py-3">🔻 Last 5</th>
+                        <th className="px-4 py-3">🔻 Last 10</th>
+                        <th className="px-4 py-3">⚡ Fastest Round</th>
+                        <th className="px-4 py-3 text-right">⭐ Points</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-700">

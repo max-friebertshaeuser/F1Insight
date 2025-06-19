@@ -1,5 +1,4 @@
-// src/pages/UpdateBet.tsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getAuthHeaders, API_BASE_BETTING } from '../../utils/api';
 import type { Driver } from '../../types/driver';
@@ -23,7 +22,6 @@ export default function UpdateBet() {
   const navigate = useNavigate();
 
   const [options, setOptions] = useState<InfoResponse | null>(null);
-  const [existingBet, setExistingBet] = useState<BetDetail | null>(null);
 
   const [selTop3, setSelTop3] = useState<string[]>([]);
   const [selLast5, setSelLast5] = useState<string>('');
@@ -57,7 +55,6 @@ export default function UpdateBet() {
         const betData: BetDetail = await betRes.json();
         if (!betRes.ok) throw new Error(betData ? betData.toString() : 'Failed to fetch bet');
 
-        setExistingBet(betData);
         setSelTop3(betData.bet_top_3 || []);
         setSelLast5(betData.bet_last_5 || '');
         setSelLast10(betData.bet_last_10 || '');

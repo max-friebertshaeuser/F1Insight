@@ -1,4 +1,3 @@
-// src/pages/GroupsList.tsx
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getAuthHeaders, API_BASE_GROUPS } from '../../utils/api';
@@ -81,22 +80,15 @@ const GroupsList: React.FC = () => {
                 to={`/groups/${g.group_name}`}
                 className="group relative flex flex-col p-6 bg-gray-800 rounded-2xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition duration-300 max-w-xs"
               >
-                {/* Ribbon */}
                 <div className="absolute top-4 right-4 bg-blue-600 text-xs uppercase px-2 py-1 rounded-full">
                   {g.members.length} Member{g.members.length > 1 ? 's' : ''}
                 </div>
-
-                {/* Icon */}
                 <div className="mb-4 flex justify-center">
                   <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center text-2xl text-blue-400 font-bold">
                     {g.group_name.charAt(0).toUpperCase()}
                   </div>
                 </div>
-
-                {/* Name */}
                 <h3 className="text-2xl font-bold mb-2 text-center">{g.group_name}</h3>
-
-                {/* Avatars */}
                 <div className="flex justify-center space-x-2 mb-4">
                   {g.members.slice(0, 4).map((u, idx) => (
                     <div
@@ -120,8 +112,6 @@ const GroupsList: React.FC = () => {
                 </span>
               </Link>
             ))}
-
-            {/* Create New Group Card */}
             <Link
               to="/groups/create"
               className="flex flex-col items-center justify-center p-6 bg-gray-800 bg-opacity-50 rounded-2xl border-2 border-dashed border-gray-600 hover:bg-opacity-75 transform hover:scale-105 transition duration-300 max-w-xs"

@@ -29,7 +29,6 @@ function Standings() {
         localStorage.setItem('access_token', data.access);
         localStorage.setItem('refresh_token', data.refresh);
 
-        // Weiterleitung zur Profil-Seite
         navigate('/bettinggame');
         } catch (err: any) {
         setError(err.message);

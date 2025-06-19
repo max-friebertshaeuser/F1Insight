@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext'; // Pfad ggf. anpassen
+import { useAuth } from '../contexts/AuthContext';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState<string>('');
@@ -31,18 +31,16 @@ useEffect(() => {
 
       if (!response.ok) {
         const errData = await response.json();
-        throw new Error(errData.detail || 'Login fehlgeschlagen');
+        throw new Error(errData.detail || 'error while logging in');
       }
 
       const data = await response.json();
 
-      // ✅ Tokens über den Context setzen (nicht direkt localStorage!)
       login(username, data.access, data.refresh);
 
-      // ✅ Weiterleitung (nachdem Context aktualisiert ist)
       navigate('/bettinggame', { replace: true });
     } catch (err: any) {
-      setError(err.message || 'Unbekannter Fehler beim Login');
+      setError(err.message || 'unknown error occurred');
     }
   };
 

@@ -1,5 +1,4 @@
-// src/pages/DeleteBet.tsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getAuthHeaders, API_BASE_BETTING } from '../../utils/api';
 
