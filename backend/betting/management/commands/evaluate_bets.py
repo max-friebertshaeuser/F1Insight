@@ -19,6 +19,7 @@ class Command(BaseCommand):
         evaluated_count = 0
 
         for bet in bets:
+            earned_points = 0
             stat, _ = BetStat.objects.get_or_create(group=bet.group, user=bet.user)
             eval_race = bet.race
             # Find the race immediately before the evaluated race
@@ -49,9 +50,9 @@ class Command(BaseCommand):
             # 1 point per correct driver, plus 2 bonus if full order matches
             for code in predicted_top3:
                 if code in actual_top3:
-                    stat.points += 1
+                    earned_points += 1
             if predicted_top3 == actual_top3:
-                stat.points += 2
+                earned_points += 2
 
             # Last 5 prediction: worst 5 from prev_race
             prev_results = list(Result.objects.filter(date=prev_race))
@@ -72,7 +73,7 @@ class Command(BaseCommand):
                     best_last5 = code
                     break
             if best_last5 and bet.bet_last_5 and best_last5 == bet.bet_last_5.driver:
-                stat.points += 2
+                earned_points += 2
 
             # Positions 6-10 (next 5 worst)
             mid5_codes = [code for (_, code) in numeric_prev[5:10]]
@@ -82,7 +83,7 @@ class Command(BaseCommand):
                     best_mid5 = code
                     break
             if best_mid5 and bet.bet_last_10 and best_mid5 == bet.bet_last_10.driver:
-                stat.points += 2
+                earned_points += 2
 
             # Fastest lap prediction (lexicographical fallback)
             fastest_list = []
@@ -93,8 +94,9 @@ class Command(BaseCommand):
             if fastest_list:
                 actual_fast = fastest_list[0][1]
                 if bet.bet_fastest_lap and actual_fast == bet.bet_fastest_lap.driver:
-                    stat.points += 2
+                    earned_points += 2
 
+            stat.points += earned_points
             print(actual_top3)
             print(last5_codes)
             print(best_last5)
@@ -103,6 +105,7 @@ class Command(BaseCommand):
             # Save stats and mark bet evaluated
             with transaction.atomic():
                 stat.save()
+                bet.points_awarded = earned_points
                 bet.evaluated = True
                 bet.save()
             evaluated_count += 1

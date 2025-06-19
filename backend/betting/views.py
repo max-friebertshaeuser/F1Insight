@@ -426,7 +426,7 @@ def set_bet(request):
 )
 @permission_classes([IsAuthenticated])
 @api_view(["GET"])
-def show_bet(request):
+def show_bet(request, race_id):
     """
     Expects JSON body:
       {
@@ -536,7 +536,7 @@ delete_bet_response_404 = openapi.Response(description="Group, race, or bet not 
 )
 @permission_classes([IsAuthenticated])
 @api_view(["DELETE"])
-def delete_bet(request):
+def delete_bet(request, race_id):
     """
     Expects JSON body:
       {
@@ -1069,4 +1069,67 @@ def get_group_info(request):
         return Response({'status': 'group not found'}, status=404)
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def get_evaluated_bets(request):
+    """
+    For a given group, returns:
+      - bets: each evaluated bet, the points earned, and the user's predictions
+      - standings: cumulative points per user in that group
 
+    Request JSON:
+      { "group": "<unique group name>" }
+    """
+    group_name = request.data.get('group')
+    if not group_name:
+        return JsonResponse(
+            {'error': 'Missing required field: group'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # 1) Lookup group
+    try:
+        group = Group.objects.get(name=group_name)
+    except Group.DoesNotExist:
+        return JsonResponse(
+            {'error': f'Group "{group_name}" not found.'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # 2) Fetch all evaluated bets for the group
+    evaluated_bets = (
+        Bet.objects
+           .filter(group=group, evaluated=True)
+           .select_related('user', 'race',
+                           'bet_last_5', 'bet_last_10', 'bet_fastest_lap')
+           .order_by('race__date', 'user__username')
+    )
+
+    bets_data = []
+    for bet in evaluated_bets:
+        # Top-3 from the through-model (ordered by position)
+        top3 = [
+            bt3.driver.driver
+            for bt3 in BetTop3.objects.filter(bet=bet).order_by('position')
+        ]
+        bets_data.append({
+            'user':            bet.user.username,
+            'race':            bet.race.date.isoformat(),
+            'points':          bet.points_awarded,
+            'bet_top_3':       top3,
+            'bet_last_5':      bet.bet_last_5.driver      if bet.bet_last_5      else None,
+            'bet_last_10':     bet.bet_last_10.driver     if bet.bet_last_10     else None,
+            'bet_fastest_lap': bet.bet_fastest_lap.driver if bet.bet_fastest_lap else None,
+        })
+
+    # 3) Fetch cumulative standings
+    stats = BetStat.objects.filter(group=group).select_related('user')
+    standings_data = [
+        {'user': stat.user.username, 'points': stat.points}
+        for stat in stats
+    ]
+
+    return JsonResponse({
+        'bets':      bets_data,
+        'standings': standings_data,
+    }, safe=False)
