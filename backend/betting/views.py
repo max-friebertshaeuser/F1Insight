@@ -260,7 +260,6 @@ def show_all_races_to_bet(request):
             "bet_last_10": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING),
                                           description="Last 10 drivers bet"),
             "bet_fastest_lap": openapi.Schema(type=openapi.TYPE_STRING, description="Driver ID for fastest lap"),
-            "safety_car": openapi.Schema(type=openapi.TYPE_BOOLEAN, description="Safety car bet"),
         },
         required=["race", "group"],
     ),
@@ -389,47 +388,77 @@ def set_bet(request):
 )
 @permission_classes([IsAuthenticated])
 @api_view(["GET"])
-def show_bet(request, race_id):
-    user = request.user
+def show_bet(request):
+    """
+    Expects JSON body:
+      {
+        "group_name": "<your group name>",
+        "race":       "YYYY-MM-DD"
+      }
+    Returns the user's bet in that group for that race.
+    """
+    user       = request.user
+    group_name = request.data.get('group')
+    race_str   = request.data.get('race')
 
-    # 1) Datum parsen und Race lookup
+    # 1) Validate inputs
+    if not group_name or not race_str:
+        return JsonResponse(
+            {'error': 'Missing required fields: group_name and race'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # 2) Lookup Group
     try:
-        dt = datetime.strptime(race_id, "%Y-%m-%d").date()
-        race = Race.objects.get(date=dt)
+        group = Group.objects.get(name=group_name)
+    except Group.DoesNotExist:
+        return JsonResponse(
+            {'error': f'Group "{group_name}" not found.'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # 3) Parse race date & lookup Race
+    try:
+        race_date = datetime.strptime(race_str, '%Y-%m-%d').date()
+        race      = Race.objects.get(date=race_date)
     except ValueError:
         return JsonResponse(
-            {"error": "Invalid date format, expected YYYY-MM-DD."},
+            {'error': 'Invalid date format for race, expected YYYY-MM-DD.'},
             status=status.HTTP_400_BAD_REQUEST
         )
     except Race.DoesNotExist:
         return JsonResponse(
-            {"error": f"Race {race_id} not found."},
+            {'error': f'Race {race_str} not found.'},
             status=status.HTTP_404_NOT_FOUND
         )
 
-    # 2) Bet holen
+    # 4) Fetch the Bet for this user, group and race
     try:
-        bet = Bet.objects.get(user=user, race=race)
+        bet = Bet.objects.get(user=user, group=group, race=race)
     except Bet.DoesNotExist:
         return JsonResponse(
-            {"error": "No bet found for this race."},
+            {'error': 'No bet found for this user–group–race combination.'},
             status=status.HTTP_404_NOT_FOUND
         )
 
-    # 3) Top-3 aus dem Through-Model auslesen (Meta.ordering = ['position'])
-    top3_ids = [bt3.driver.driver for bt3 in BetTop3.objects.filter(bet=bet)]
+    # 5) Serialize Top-3 from the through-model (ordered by position)
+    top3_ids = [
+        bt3.driver.driver
+        for bt3 in BetTop3.objects.filter(bet=bet).order_by('position')
+    ]
 
-    # 4) FK-Felder serialisieren
-    last5_id = bet.bet_last_5.driver if bet.bet_last_5 else None
-    last10_id = bet.bet_last_10.driver if bet.bet_last_10 else None
+    # 6) Serialize the other fields
+    last5_id   = bet.bet_last_5.driver      if bet.bet_last_5      else None
+    last10_id  = bet.bet_last_10.driver     if bet.bet_last_10     else None
     fastest_id = bet.bet_fastest_lap.driver if bet.bet_fastest_lap else None
 
     return JsonResponse({
-        "race": race_id,
-        "bet_top_3": top3_ids,
-        "bet_last_5": last5_id,
-        "bet_last_10": last10_id,
-        "bet_fastest_lap": fastest_id,
+        'group':           group_name,
+        'race':            race_str,
+        'bet_top_3':       top3_ids,
+        'bet_last_5':      last5_id,
+        'bet_last_10':     last10_id,
+        'bet_fastest_lap': fastest_id,
     })
 
 
@@ -452,39 +481,65 @@ def show_bet(request, race_id):
 )
 @permission_classes([IsAuthenticated])
 @api_view(["DELETE"])
-def delete_bet(request, race_id):
-    user = request.user
+def delete_bet(request):
+    """
+    Expects JSON body:
+      {
+        "group_name": "<your group name>",
+        "race":       "YYYY-MM-DD"
+      }
+    Deletes that user's bet for the given group and race.
+    """
+    user       = request.user
+    group_name = request.data.get('group')
+    race_str   = request.data.get('race')
 
-    # 1) Datum parsen
-    try:
-        race_date = datetime.strptime(race_id, "%Y-%m-%d").date()
-    except ValueError:
+    # 1) Validate inputs
+    if not group_name or not race_str:
         return JsonResponse(
-            {"error": "Invalid date format, expected YYYY-MM-DD."},
+            {'error': 'Missing required fields: group_name and race'},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # 2) Race lookup
+    # 2) Lookup group
+    try:
+        group = Group.objects.get(name=group_name)
+    except Group.DoesNotExist:
+        return JsonResponse(
+            {'error': f'Group "{group_name}" not found.'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    # 3) Parse race date
+    try:
+        race_date = datetime.strptime(race_str, '%Y-%m-%d').date()
+    except ValueError:
+        return JsonResponse(
+            {'error': 'Invalid date format for race, expected YYYY-MM-DD.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # 4) Lookup race
     try:
         race = Race.objects.get(date=race_date)
     except Race.DoesNotExist:
         return JsonResponse(
-            {"error": f"Race {race_id} not found."},
+            {'error': f'Race {race_str} not found.'},
             status=status.HTTP_404_NOT_FOUND
         )
 
-    # 3) Bet lookup & delete
+    # 5) Lookup and delete the bet
     try:
-        bet = Bet.objects.get(user=user, race=race)
+        bet = Bet.objects.get(user=user, group=group, race=race)
     except Bet.DoesNotExist:
         return JsonResponse(
-            {"error": "Bet not found."},
+            {'error': 'Bet not found for this user–group–race combination.'},
             status=status.HTTP_404_NOT_FOUND
         )
 
     bet.delete()
     return JsonResponse(
-        {"message": "Bet deleted successfully."},
+        {'message': 'Bet deleted successfully.'},
         status=status.HTTP_200_OK
     )
 
