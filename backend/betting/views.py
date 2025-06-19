@@ -23,15 +23,15 @@ from rest_framework.decorators import api_view
     operation_summary="Create a new betting group",
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
-        properties={
-            'name': openapi.Schema(type=openapi.TYPE_STRING, description='username of the owner'),
-            'group_name': openapi.Schema(type=openapi.TYPE_STRING, description='name of the group'),
-        },
         required=['name', 'group_name'],
+        properties={
+            'name':       openapi.Schema(type=openapi.TYPE_STRING, description='Owner username'),
+            'group_name': openapi.Schema(type=openapi.TYPE_STRING, description='Group name'),
+        },
     ),
     responses={
         200: openapi.Response('Group created successfully'),
-        400: openapi.Response('Group already exists'),
+        400: openapi.Response('Missing/invalid fields or group exists'),
         404: openapi.Response('Owner not found'),
         500: openapi.Response('Server error'),
     }
@@ -67,16 +67,15 @@ def create_group(request):
     operation_summary="Join an existing betting group",
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
+        required=['group_name'],
         properties={
             'group_name': openapi.Schema(type=openapi.TYPE_STRING, description='Name of the group'),
-            'join_id': openapi.Schema(type=openapi.TYPE_STRING, description='Join ID of the group'),
         },
-        required=['group_name', 'join_id'],
     ),
     responses={
-        200: openapi.Response('joined group successfully'),
-        400: openapi.Response('missing required fields'),
-        404: openapi.Response('group not found or invalid join id'),
+        200: openapi.Response('Joined group successfully'),
+        400: openapi.Response('Missing required fields'),
+        404: openapi.Response('Group not found'),
     }
 )
 @api_view(['POST'])
@@ -99,17 +98,17 @@ def join_group(request):
 
 @swagger_auto_schema(
     method='post',
-    operation_summary="leave a betting group",
+    operation_summary="Leave a betting group",
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
-        properties={
-            'group_name': openapi.Schema(type=openapi.TYPE_STRING, description='Name der Gruppe'),
-        },
         required=['group_name'],
+        properties={
+            'group_name': openapi.Schema(type=openapi.TYPE_STRING, description='Name of the group'),
+        },
     ),
     responses={
-        200: openapi.Response('left group successfully'),
-        404: openapi.Response('group not found'),
+        200: openapi.Response('Left group successfully'),
+        404: openapi.Response('Group not found'),
     }
 )
 @api_view(['POST'])
@@ -135,19 +134,27 @@ def leave_group(request):
     operation_summary="Get all betting groups",
     responses={
         200: openapi.Response(
-            description="List of all groups",
-            examples={
-                "application/json": [
-                    {
-                        "group_id": 1,
-                        "group_name": "Champions",
-                        "owner": "user1",
-                        "created_at": "2024-07-01T12:00:00Z",
-                        "members": ["user1", "user2"]
-                    }
-                ]
-            }
-        ),
+            description="List of groups",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING),
+                    'groups': openapi.Schema(
+                        type=openapi.TYPE_ARRAY,
+                        items=openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'group_id':   openapi.Schema(type=openapi.TYPE_INTEGER),
+                                'group_name': openapi.Schema(type=openapi.TYPE_STRING),
+                                'owner':      openapi.Schema(type=openapi.TYPE_STRING),
+                                'created_at': openapi.Schema(type=openapi.TYPE_STRING),
+                                'members':    openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
+                            }
+                        )
+                    )
+                }
+            )
+        )
     }
 )
 @api_view(['GET'])
@@ -170,18 +177,18 @@ def get_all_groups(request):
 
 @swagger_auto_schema(
     method='post',
-    operation_summary="delete a betting group",
+    operation_summary="Delete a betting group",
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
+        required=['name'],
         properties={
-            'name': openapi.Schema(type=openapi.TYPE_INTEGER, description='name der Gruppe'),
+            'name': openapi.Schema(type=openapi.TYPE_STRING, description='Group name'),
         },
-        required=['group_id'],
     ),
     responses={
-        200: openapi.Response('group deleted successfully'),
-        403: openapi.Response('not authorized to delete this group'),
-        404: openapi.Response('group not found'),
+        200: openapi.Response('Group deleted successfully'),
+        403: openapi.Response('Not authorized to delete this group'),
+        404: openapi.Response('Group not found'),
     }
 )
 @permission_classes([IsAuthenticated])
@@ -200,21 +207,21 @@ def remove_group(request):
 
 @swagger_auto_schema(
     method='get',
-    operation_summary="List all upcoming races available for betting",
+    operation_summary="Get the next upcoming race",
     responses={
         200: openapi.Response(
-            description="List of upcoming races",
-            examples={
-                "application/json": [
-                    {
-                        "id": "2024-07-01",
-                        "season": "2024",
-                        "circuit": "Silverstone",
-                        "date": "2024-07-01"
-                    }
-                ]
-            }
-        )
+            description="Next race details",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'id':      openapi.Schema(type=openapi.TYPE_STRING),
+                    'season':  openapi.Schema(type=openapi.TYPE_STRING),
+                    'circuit': openapi.Schema(type=openapi.TYPE_STRING),
+                    'date':    openapi.Schema(type=openapi.TYPE_STRING),
+                }
+            )
+        ),
+        404: openapi.Response('No upcoming races found'),
     }
 )
 @permission_classes([IsAuthenticated])
@@ -262,50 +269,23 @@ bet_top3_param = openapi.Parameter(
 
 @swagger_auto_schema(
     method='post',
-    operation_summary="Place a Bet",
-    operation_description="Creates a new bet for the given user, group, and race.",
+    operation_summary="Place a bet",
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         required=['group', 'race', 'bet_top_3'],
         properties={
-            'group':            openapi.Schema(type=openapi.TYPE_STRING, description='Unique group name'),
-            'race':             openapi.Schema(type=openapi.TYPE_STRING, description='Race date YYYY-MM-DD'),
-            'bet_top_3':        openapi.Schema(
-                type=openapi.TYPE_ARRAY,
-                description='List of exactly 3 driver codes in prediction order',
-                items=openapi.Schema(type=openapi.TYPE_STRING)
-            ),
-            'bet_last_5':       openapi.Schema(type=openapi.TYPE_STRING, description='Driver code for best of last 5'),
-            'bet_last_10':      openapi.Schema(type=openapi.TYPE_STRING, description='Driver code for best of positions 6–10'),
-            'bet_fastest_lap':  openapi.Schema(type=openapi.TYPE_STRING, description='Driver code for fastest lap'),
+            'group':           openapi.Schema(type=openapi.TYPE_STRING, description='Group name'),
+            'race':            openapi.Schema(type=openapi.TYPE_STRING, description='Race date YYYY-MM-DD'),
+            'bet_top_3':       openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
+            'bet_last_5':      openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
+            'bet_last_10':     openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
+            'bet_fastest_lap': openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
         },
     ),
     responses={
-        201: openapi.Response(
-            description="Bet created successfully",
-            schema=openapi.Schema(
-                type=openapi.TYPE_OBJECT,
-                properties={
-                    'message': openapi.Schema(type=openapi.TYPE_STRING),
-                    'bet': openapi.Schema(
-                        type=openapi.TYPE_OBJECT,
-                        properties={
-                            'id':              openapi.Schema(type=openapi.TYPE_INTEGER),
-                            'user':            openapi.Schema(type=openapi.TYPE_STRING),
-                            'group':           openapi.Schema(type=openapi.TYPE_STRING),
-                            'race':            openapi.Schema(type=openapi.TYPE_STRING),
-                            'bet_top_3':       openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
-                            'bet_last_5':      openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
-                            'bet_last_10':     openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
-                            'bet_fastest_lap': openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
-                            'bet_date':        openapi.Schema(type=openapi.TYPE_STRING, description='ISO datetime'),
-                        }
-                    )
-                }
-            )
-        ),
-        400: openapi.Response(description="Missing or invalid fields"),
-        404: openapi.Response(description="Race or group not found"),
+        201: openapi.Response('Bet created successfully'),
+        400: openapi.Response('Missing or invalid fields'),
+        404: openapi.Response('Race or group not found'),
     }
 )
 @api_view(["POST"])
@@ -396,36 +376,31 @@ def set_bet(request):
     }, status=status.HTTP_201_CREATED)
 
 
+race_id_param = openapi.Parameter(
+    'race_id', openapi.IN_PATH,
+    description='Race date in YYYY-MM-DD',
+    type=openapi.TYPE_STRING,
+    required=True
+)
 @swagger_auto_schema(
     method='get',
-    operation_summary="Get the bet for a specific race",
-    manual_parameters=[
-        openapi.Parameter(
-            'race_id',
-            openapi.IN_PATH,
-            description="Race date (ID)",
-            type=openapi.TYPE_STRING,
-            required=True
-        ),
-    ],
+    operation_summary="Get a bet for a race",
+    manual_parameters=[race_id_param],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['group', 'race'],
+        properties={
+            'group': openapi.Schema(type=openapi.TYPE_STRING),
+            'race':  openapi.Schema(type=openapi.TYPE_STRING),
+        }
+    ),
     responses={
-        200: openapi.Response(
-            description="Bet details",
-            examples={
-                "application/json": {
-                    "race": "2024-07-01",
-                    "bet_top_3": ["hamilton", "verstappen", "norris"],
-                    "bet_last_5": ["zhou", "tsunoda", "albon", "sargeant", "magnussen"],
-                    "bet_last_10": [],
-                    "bet_fastest_lap": "leclerc",
-                }
-            }
-        ),
-        404: openapi.Response(description="No bet found for this race."),
+        200: openapi.Response('Bet details'),
+        404: openapi.Response('Bet not found'),
     }
 )
 @permission_classes([IsAuthenticated])
-@api_view(["GET"])
+@api_view(["POST"])
 def show_bet(request, race_id):
     """
     Expects JSON body:
@@ -667,16 +642,27 @@ update_bet_response = openapi.Response(
     )
 )
 
+update_bet_request = openapi.Schema(
+    type=openapi.TYPE_OBJECT,
+    required=['group', 'race'],
+    properties={
+        'group':           openapi.Schema(type=openapi.TYPE_STRING),
+        'race':            openapi.Schema(type=openapi.TYPE_STRING),
+        'bet_top_3':       openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
+        'bet_last_5':      openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
+        'bet_last_10':     openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
+        'bet_fastest_lap': openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
+    }
+)
 @swagger_auto_schema(
     method='put',
-    operation_summary="Update a Bet",
-    operation_description="Modify an existing bet for the authenticated user in the specified group and race.",
+    operation_summary="Update an existing bet",
     manual_parameters=[race_id_param],
     request_body=update_bet_request,
     responses={
-        200: update_bet_response,
-        400: openapi.Response(description="Missing or invalid fields"),
-        404: openapi.Response(description="Group, race, or bet not found"),
+        200: openapi.Response('Bet updated successfully'),
+        400: openapi.Response('Missing or invalid fields'),
+        404: openapi.Response('Bet not found'),
     }
 )
 @permission_classes([IsAuthenticated])
