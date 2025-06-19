@@ -50,11 +50,11 @@ export default function EvaluatedBetsTable() {
     })();
   }, [groupName]);
 
-  if (loading) return <p className="text-center mt-20 text-gray-400">Loading evaluated bets...</p>;
-  if (error) return <p className="text-center mt-20 text-red-400">{error}</p>;
-  if (!data || data.bets.length === 0) return <p className="text-center mt-20 text-gray-400">No evaluated bets found.</p>;
+  if (loading) return <p className="text-center mt-20 text-gray-400">⏳ Lade ausgewertete Tipps...</p>;
+  if (error) return <p className="text-center mt-20 text-red-500">❌ {error}</p>;
+  if (!data || data.bets.length === 0)
+    return <p className="text-center mt-20 text-gray-400">Keine ausgewerteten Tipps gefunden.</p>;
 
-  // Gruppiere Bets nach Race
   const groupedByRace = data.bets.reduce<Record<string, Bet[]>>((acc, bet) => {
     if (!acc[bet.race]) acc[bet.race] = [];
     acc[bet.race].push(bet);
@@ -62,41 +62,49 @@ export default function EvaluatedBetsTable() {
   }, {});
 
   return (
-    <div className="bg-[#0F0F17] text-white min-h-screen px-4 py-8">
-      <div className="max-w-6xl mx-auto">
-        <h2 className="text-3xl font-bold mb-6 text-center">Ausgewertete Tipps für Gruppe: {groupName}</h2>
+    <div className="bg-[#0D0D11] text-white min-h-screen px-4 py-12 sm:px-6 lg:px-12">
+      <div className="max-w-7xl mx-auto">
+        <h2 className="text-4xl font-extrabold text-center mb-16 tracking-tight">Ausgewertete Tipps – Gruppe: {groupName}</h2>
 
-        {Object.entries(groupedByRace).sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime()).map(([race, bets]) => (
-          <div key={race} className="mb-10 border border-gray-700 rounded-lg p-6 bg-[#1A1A2A]">
-            <h3 className="text-xl font-semibold mb-4">🏁 Rennen: {race}</h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm text-left">
-                <thead className="bg-[#2A2A3A] text-gray-300">
-                  <tr>
-                    <th className="px-4 py-2">👤 Nutzer</th>
-                    <th className="px-4 py-2">🥇 Top 3</th>
-                    <th className="px-4 py-2">🔻 Last 5</th>
-                    <th className="px-4 py-2">🔻 Last 10</th>
-                    <th className="px-4 py-2">⚡ Fastest Lap</th>
-                    <th className="px-4 py-2 text-right">⭐ Punkte</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bets.map(bet => (
-                    <tr key={`${race}-${bet.user}`} className="border-t border-gray-700">
-                      <td className="px-4 py-2">{bet.user}</td>
-                      <td className="px-4 py-2">{bet.bet_top_3.join(', ')}</td>
-                      <td className="px-4 py-2">{bet.bet_last_5}</td>
-                      <td className="px-4 py-2">{bet.bet_last_10}</td>
-                      <td className="px-4 py-2">{bet.bet_fastest_lap}</td>
-                      <td className="px-4 py-2 text-right font-semibold">{bet.points}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ))}
+        <div className="space-y-16">
+          {Object.entries(groupedByRace)
+            .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
+            .map(([race, bets]) => (
+              <div
+                key={race}
+                className="bg-gradient-to-br from-[#1c1c2b] to-[#14141e] rounded-2xl shadow-xl ring-1 ring-gray-800 p-6 sm:p-8 backdrop-blur-sm"
+              >
+                <h3 className="text-2xl font-semibold mb-6 text-white tracking-wide">🏁 Rennen: {race}</h3>
+
+                <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-700">
+                  <table className="min-w-full text-sm sm:text-base text-left">
+                    <thead className="bg-[#2A2A3A] text-gray-300 sticky top-0 z-10">
+                      <tr>
+                        <th className="px-4 py-3">👤 Nutzer</th>
+                        <th className="px-4 py-3">🥇 Top 3</th>
+                        <th className="px-4 py-3">🔻 Letzte 5</th>
+                        <th className="px-4 py-3">🔻 Letzte 10</th>
+                        <th className="px-4 py-3">⚡ Schnellste Runde</th>
+                        <th className="px-4 py-3 text-right">⭐ Punkte</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-700">
+                      {bets.map((bet, i) => (
+                        <tr key={`${race}-${bet.user}-${i}`} className="hover:bg-[#2a2a3a]/40 transition">
+                          <td className="px-4 py-3 font-medium text-white">{bet.user}</td>
+                          <td className="px-4 py-3 text-gray-100">{bet.bet_top_3.join(', ')}</td>
+                          <td className="px-4 py-3 text-gray-300">{bet.bet_last_5}</td>
+                          <td className="px-4 py-3 text-gray-300">{bet.bet_last_10}</td>
+                          <td className="px-4 py-3 text-gray-300">{bet.bet_fastest_lap}</td>
+                          <td className="px-4 py-3 text-right font-semibold text-yellow-400">{bet.points}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+        </div>
       </div>
     </div>
   );
