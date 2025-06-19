@@ -1,56 +1,130 @@
-// src/pages/SetBet.jsx
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getAuthHeaders, API_BASE_BETTING } from '../../utils/api';
+import type { Driver } from '../../types/driver';
+import ScrollableDriverSelector from '../../components/ScrollableDriverSelector';
 
-function SetBet() {
-  const [races, setRaces] = useState([]);
-  const [raceId, setRaceId] = useState('');
-  const [groupId, setGroupId] = useState('');
-  const [betTop3, setBetTop3] = useState(['', '', '']);
-  const [betLast5, setBetLast5] = useState('');
-  const [betLast10, setBetLast10] = useState('');
-  const [betFastestLap, setBetFastestLap] = useState('');
-  const [error, setError] = useState(null);
+interface InfoResponse {
+  drivers: Driver[];
+  last5: Driver[];
+  mid5: Driver[];
+}
+
+export default function SetBet() {
+  const { groupName, raceId } = useParams<{ groupName: string; raceId: string }>();
   const navigate = useNavigate();
 
+  const [options, setOptions] = useState<InfoResponse | null>(null);
+  const [selTop3, setSelTop3] = useState<string[]>([]);
+  const [selLast5, setSelLast5] = useState<string>('');
+  const [selLast10, setSelMid5] = useState<string>('');
+  const [selFastest, setSelFastest] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
   useEffect(() => {
-    fetch(`${API_BASE_BETTING}/available-races/`, { headers: getAuthHeaders() })
-      .then(r => r.json())
-      .then(data => setRaces([data]))
-      .catch(e => setError(e.message));
-  }, []);
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE_BETTING}/info/?race=${raceId}`, {
+          headers: getAuthHeaders(),
+        });
+        const data: InfoResponse = await res.json();
+        setOptions(data);
+      } catch (e) {
+        setError('Failed to load driver options');
+      }
+    })();
+  }, [raceId]);
 
   const handleSubmit = async () => {
+    setSubmitting(true);
     try {
       const res = await fetch(`${API_BASE_BETTING}/createbet`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ race: raceId, group: parseInt(groupId), bet_top_3: betTop3, bet_last_5: betLast5, bet_last_10: betLast10, bet_fastest_lap: betFastestLap }),
+        body: JSON.stringify({
+          group: groupName,
+          race: raceId,
+          user: localStorage.getItem('username'),
+          bet_top_3: selTop3,
+          bet_last_5: selLast5 ? [selLast5] : [],
+          bet_last_10: selLast10 ? [selLast10] : [],
+          bet_fastest_lap: selFastest,
+        }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || json.message || 'Error placing bet');
-      navigate('/groups');
-    } catch (err) {
-      setError(err.message);
+      if (!res.ok) throw new Error(json.error || json.message || 'Submission failed');
+      navigate(`/groups/${groupName}/bets`);
+    } catch (e: any) {
+      setError(e.message);
+      setSubmitting(false);
     }
   };
 
+  if (!options) return <p className="text-center mt-20 text-gray-400">Loading drivers...</p>;
+
   return (
-    <div className="p-6 bg-[#0F0F17] text-white min-h-screen">
-      <h2 className="text-3xl font-bold mb-4">Place a Bet</h2>
-      {error && <p className="text-red-500 mb-4">{error}</p>}
-      <select value={raceId} onChange={e => setRaceId(e.target.value)} className="p-2 bg-gray-700 rounded mb-4">
-        <option value="">Select Race</option>
-        {races.map(r => <option key={r.id} value={r.id}>{r.circuit} - {r.date}</option>)}
-      </select>
-      <input type="number" placeholder="Group ID" value={groupId} onChange={e => setGroupId(e.target.value)} className="block p-2 mb-4 bg-gray-700 rounded" />
-      {betTop3.map((val, idx) => <input key={idx} type="text" placeholder={`Top ${idx+1}`} value={val} onChange={e => { const arr = [...betTop3]; arr[idx]=e.target.value; setBetTop3(arr);} } className="block p-2 mb-2 bg-gray-700 rounded" />)}
-      <input type="text" placeholder="Last 5" value={betLast5} onChange={e => setBetLast5(e.target.value)} className="block p-2 mb-4 bg-gray-700 rounded" />
-      <input type="text" placeholder="Last 10" value={betLast10} onChange={e => setBetLast10(e.target.value)} className="block p-2 mb-4 bg-gray-700 rounded" />
-      <input type="text" placeholder="Fastest Lap" value={betFastestLap} onChange={e => setBetFastestLap(e.target.value)} className="block p-2 mb-4 bg-gray-700 rounded" />
-      <button onClick={handleSubmit} className="p-2 bg-green-600 rounded">Bet</button>
+    <div className="bg-[#0F0F17] text-white min-h-screen px-4 py-8">
+      <div className="max-w-4xl mx-auto space-y-8">
+        <h2 className="text-3xl font-bold text-center">Place Your Bet: {raceId}</h2>
+        {error && <p className="text-red-500 text-center">{error}</p>}
+
+        <ScrollableDriverSelector
+          title="Top 3"
+          drivers={options.drivers}
+          name="top3"
+          selection={selTop3}
+          onSelect={(id) => {
+            if (!selTop3.includes(id) && selTop3.length < 3) {
+              setSelTop3([...selTop3, id]);
+            } else if (selTop3.includes(id)) {
+              setSelTop3(selTop3.filter(d => d !== id));
+            }
+          }}
+          type="checkbox"
+          limit={3}
+        />
+
+        <ScrollableDriverSelector
+          title="Last 5"
+          drivers={options.last5}
+          name="last5"
+          selection={selLast5}
+          onSelect={setSelLast5}
+        />
+
+        <ScrollableDriverSelector
+          title="Last 10"
+          drivers={options.drivers.slice(-10)}
+          name="last10"
+          selection={selLast10}
+          onSelect={setSelMid5}
+        />
+
+        <ScrollableDriverSelector
+          title="Fastest Lap"
+          drivers={options.drivers}
+          name="fastest"
+          selection={selFastest}
+          onSelect={setSelFastest}
+        />
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <button
+            disabled={submitting}
+            onClick={handleSubmit}
+            className="flex-1 py-3 bg-green-600 rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+          >
+            {submitting ? 'Submitting...' : 'Submit Bet'}
+          </button>
+          <button
+            onClick={() => navigate(-1)}
+            className="flex-1 py-3 bg-gray-600 rounded-lg hover:bg-gray-500 transition"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
-export default SetBet;

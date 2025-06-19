@@ -19,7 +19,7 @@ const DriverCard = ({driver}: { driver: Partial<Driver> }) => {
             <div className="flex flex-row justify-between items-center">
                 <div className="text-xs text-center flex flex-col">
                     <span className="font-fwide text-base">{driver.points}</span>
-                    <span className="bg-f1-white text-f1-black font-fwide text-xs rounded-xl px-2">PTS</span>
+                    <span className="driver-points-label bg-f1-white text-f1-black font-fwide text-xs rounded-xl px-2">PTS</span>
                 </div>
                 <div className="text-4xl font-fbold">{driver.position}</div>
             </div>
@@ -42,7 +42,7 @@ const DriverCard = ({driver}: { driver: Partial<Driver> }) => {
                 <img
                     src={`/assets/nationality-icons/${driver.nationality ?? 'British'}.avif`}
                     alt={driver.nationality}
-                    className="w-5 h-4 mt-1 ml-auto border border-f1-white"
+                    className="w-5 h-4 mt-1 ml-auto border border-f1-white nationality-flag"
                 />
             </div>
         </div>

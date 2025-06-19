@@ -1,82 +1,93 @@
 // src/pages/JoinGroup.tsx
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getAuthHeaders, API_BASE_GROUPS } from '../../utils/api';
 
-interface Group {
-  group_id: number;
+interface BetStat {
+  user: string;
+  points: number;
+}
+
+interface GroupInfoData {
   group_name: string;
-  join_link: string; // join_id comes back as join_link
+  owner: string;
+  bet_stats: BetStat[];
 }
 
 const JoinGroup: React.FC = () => {
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const { groupName } = useParams<{ groupName: string }>();
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  // 1) Prüfe Membership und leite ggf. sofort weiter
   useEffect(() => {
-    const fetchGroups = async () => {
+    if (!groupName) return;
+    (async () => {
       try {
-        const res = await fetch(`${API_BASE_GROUPS}/getallgroups/`, {
+        const res = await fetch(`${API_BASE_GROUPS}/getgroupinfo/`, {
+          method: 'POST',
           headers: getAuthHeaders(),
+          body: JSON.stringify({ group_name: groupName }),
         });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.status || 'Fehler beim Laden der Gruppen');
-        setGroups(json.groups);
-      } catch (err: any) {
-        setError(err.message);
-      }
-    };
-    fetchGroups();
-  }, []);
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.status || err.error || 'Fehler beim Laden');
+        }
+        const data: GroupInfoData = await res.json();
 
+        // aktueller User
+        const currentUser = localStorage.getItem('username');
+        const member = data.bet_stats.some(bs => bs.user === currentUser);
+
+        if (member) {
+          // LEITUNG: sofort navigieren
+          navigate(`/groups/${groupName}`, { replace: true });
+          return;
+        }
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [groupName, navigate]);
+
+  // 2) Nach Beitritt ebenfalls weiterleiten
   const handleJoin = async () => {
-    if (selectedGroupId === null) return;
-    const group = groups.find(g => g.group_id === selectedGroupId);
-    if (!group) return;
     try {
       const res = await fetch(`${API_BASE_GROUPS}/join/`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify({
-          group_name: group.group_name,
-          join_id: group.join_link,
-        }),
+        body: JSON.stringify({ group_name: groupName }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.status || json.error || 'Fehler beim Beitreten');
-      navigate('/groups');
+      navigate(`/groups/${groupName}`, { replace: true });
     } catch (err: any) {
       setError(err.message);
     }
   };
 
+  // 3) UI
+  if (loading) {
+    return <p className="text-center mt-20 text-gray-400">Loading...</p>;
+  }
+  if (error) {
+    return <p className="text-center mt-20 text-red-500">{error}</p>;
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[#0F0F17] text-white">
-      <h1 className="text-4xl font-bold mb-6">Gruppe beitreten</h1>
-
-      {error && <p className="mb-4 text-red-500">{error}</p>}
-
-      <select
-        value={selectedGroupId ?? ''}
-        onChange={e => setSelectedGroupId(e.target.value ? parseInt(e.target.value) : null)}
-        className="w-full max-w-sm p-2 mb-4 bg-gray-700 rounded"
-      >
-        <option value="">Wähle eine Gruppe</option>
-        {groups.map(g => (
-          <option key={g.group_id} value={g.group_id}>
-            {g.group_name}
-          </option>
-        ))}
-      </select>
-
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[#0F0F17] text-white p-6">
+      <h1 className="text-3xl font-bold mb-4">Join group</h1>
+      <p className="mb-6 text-lg">
+        Do you want to join the group <span className="font-semibold">{groupName}</span>?
+      </p>
       <button
         onClick={handleJoin}
-        disabled={selectedGroupId === null}
-        className="w-full max-w-sm p-2 bg-blue-600 rounded disabled:opacity-50"
+        className="px-6 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition"
       >
-        Beitreten
+        Join
       </button>
     </div>
   );
