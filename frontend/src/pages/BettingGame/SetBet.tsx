@@ -17,7 +17,7 @@ export default function SetBet() {
   const [options, setOptions] = useState<InfoResponse | null>(null);
   const [selTop3, setSelTop3] = useState<string[]>([]);
   const [selLast5, setSelLast5] = useState<string>('');
-  const [selLast10, setSelMid5] = useState<string>('');
+  const [selLast10, setSelLast10] = useState<string>('');
   const [selFastest, setSelFastest] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -45,10 +45,9 @@ export default function SetBet() {
         body: JSON.stringify({
           group: groupName,
           race: raceId,
-          user: localStorage.getItem('username'),
           bet_top_3: selTop3,
-          bet_last_5: selLast5 ? [selLast5] : [],
-          bet_last_10: selLast10 ? [selLast10] : [],
+          bet_last_5: selLast5,
+          bet_last_10: selLast10,
           bet_fastest_lap: selFastest,
         }),
       });
@@ -66,7 +65,7 @@ export default function SetBet() {
   return (
     <div className="bg-[#0F0F17] text-white min-h-screen px-4 py-8">
       <div className="max-w-4xl mx-auto space-y-8">
-        <h2 className="text-3xl font-bold text-center">Place Your Bet: {raceId}</h2>
+        <h2 className="text-3xl font-bold text-center">Place Your Bet: {raceId} in group: {groupName}</h2>
         {error && <p className="text-red-500 text-center">{error}</p>}
 
         <ScrollableDriverSelector
@@ -98,7 +97,7 @@ export default function SetBet() {
           drivers={options.drivers.slice(-10)}
           name="last10"
           selection={selLast10}
-          onSelect={setSelMid5}
+          onSelect={setSelLast10}
         />
 
         <ScrollableDriverSelector

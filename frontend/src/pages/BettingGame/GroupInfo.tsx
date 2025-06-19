@@ -118,6 +118,12 @@ export default function GroupInfo() {
       {/* Actions */}
       <div className="flex space-x-4">
         <Link
+          to={`/groups/${groupName}/evaluated`}
+          className="px-6 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition"
+        >
+          Evaluated Bets
+        </Link>
+        <Link
           to={`/groups/${groupName}/bets`}
           className="px-6 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition"
         >
@@ -130,10 +136,10 @@ export default function GroupInfo() {
           Leave group
         </Link>
         <Link
-          to="/groups"
+          to="/bettinggame"
           className="px-6 py-2 bg-gray-600 rounded-lg hover:bg-gray-500 transition"
         >
-          Back to "My Groups"
+          Back to Betting Game Start
         </Link>
       </div>
     </div>

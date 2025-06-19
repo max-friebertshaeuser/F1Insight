@@ -4,7 +4,6 @@ import { useAuthFetch } from '../utils/authFetch';
 
 const PrivateRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
   const authFetch = useAuthFetch();
-
   const [loading, setLoading] = useState(true);
   const [authOk, setAuthOk] = useState(false);
 
@@ -12,11 +11,7 @@ const PrivateRoute: React.FC<{ children: React.ReactElement }> = ({ children }) 
     const checkAuth = async () => {
       try {
         const response = await authFetch('http://localhost:8000/api/auth/profile/');
-        if (response.ok) {
-          setAuthOk(true);
-        } else {
-          setAuthOk(false);
-        }
+        setAuthOk(response.ok);
       } catch {
         setAuthOk(false);
       } finally {
@@ -27,7 +22,13 @@ const PrivateRoute: React.FC<{ children: React.ReactElement }> = ({ children }) 
     checkAuth();
   }, [authFetch]);
 
-  if (loading) return <div>Lade...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen text-gray-400 text-lg">
+        Loading...
+      </div>
+    );
+  }
 
   return authOk ? children : <Navigate to="/login" />;
 };
