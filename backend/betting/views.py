@@ -279,8 +279,8 @@ def set_bet(request):
 
     # 1) Pflichtdaten prüfen
     race_str = data.get("race")
-    group_id = data.get("group")
-    if not race_str or not group_id:
+    group_name = data.get("group")
+    if not race_str or not group_name:
         return JsonResponse(
             {"error": "Missing race or group field."},
             status=status.HTTP_400_BAD_REQUEST
@@ -294,7 +294,7 @@ def set_bet(request):
                             status=status.HTTP_404_NOT_FOUND)
 
     try:
-        group = Group.objects.get(id=group_id)
+        group = Group.objects.get(name=group_name)
     except Group.DoesNotExist:
         return JsonResponse({"error": "Group not found."}, status=status.HTTP_404_NOT_FOUND)
 
