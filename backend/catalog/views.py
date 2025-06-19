@@ -515,22 +515,27 @@ def get_driver_standings(request):
 def detailed_team_view(request):
     team_id = request.data.get('team_id')
     if not team_id:
-        return JsonResponse({'error': 'Bitte team_id im Request-Body mitgeben.'}, status=400)
+        return JsonResponse(
+            {'error': 'Bitte team_id im Request-Body mitgeben.'},
+            status=400
+        )
 
     try:
         team = Constructor.objects.get(pk=team_id)
     except Constructor.DoesNotExist:
-        return JsonResponse({'error': f'Kein Team mit der ID "{team_id}" gefunden.'}, status=404)
+        return JsonResponse(
+            {'error': f'Kein Team mit der ID \"{team_id}\" gefunden.'},
+            status=404
+        )
 
     # 1. Aktuelle Saison ermitteln
-    latest_season_obj = (
-        Season.objects
-        .annotate(as_int=Cast('season', IntegerField()))
-        .order_by('-as_int')
-        .first()
-    )
-    if not latest_season_obj:
+    # (pure Python max, avoids Cast issues)
+    seasons = Season.objects.values_list('season', flat=True)
+    years = [int(s) for s in seasons if s.isdigit()]
+    if not years:
         return JsonResponse({'error': 'Keine Saison-Daten gefunden.'}, status=404)
+    latest_year = max(years)
+    latest_season_obj = Season.objects.get(season=str(latest_year))
 
     # 2. Fahrer des Teams in dieser Saison
     current_dts = DriverTeam.objects.filter(
@@ -548,7 +553,7 @@ def detailed_team_view(request):
         for dt in current_dts
     ]
 
-    # 3. Aktuelle Saison: Punkte & Siege aus Constructorstanding
+    # 3. Aktuelle Saison: Punkte & Siege
     try:
         cs_current = Constructorstanding.objects.get(
             constructor=team,
@@ -560,17 +565,17 @@ def detailed_team_view(request):
         current_points = 0.0
         current_wins   = 0
 
-    # 4. Karriere: aufsummierte Punkte & Siege aus Constructorstanding
-    career_cs = Constructorstanding.objects.filter(constructor=team)
-    career_agg = career_cs.aggregate(
+    # 4. Karriere: aufsummierte Punkte & Siege
+    career_agg = Constructorstanding.objects.filter(
+        constructor=team
+    ).aggregate(
         total_points=Sum(Cast('points', FloatField())),
         total_wins=  Sum(Cast('wins',   IntegerField()))
     )
     career_points = career_agg['total_points'] or 0.0
     career_wins   = career_agg['total_wins']   or 0
 
-    # 5. Podien & Poles berechnen
-    #    Aktuelle Saison
+    # 5. Podien & Poles – aktuell & Karriere
     current_results = Result.objects.filter(
         constructor=team,
         date__season=latest_season_obj
@@ -582,10 +587,9 @@ def detailed_team_view(request):
         driver_id__in=current_driver_ids
     ).count()
 
-    #    Karriere (über alle Saisons)
-    career_results = Result.objects.filter(constructor=team)
-    career_podiums = career_results.filter(position__in=['1','2','3']).count()
-    career_poles   = QualifyingResult.objects.filter(
+    career_results  = Result.objects.filter(constructor=team)
+    career_podiums  = career_results.filter(position__in=['1','2','3']).count()
+    career_poles    = QualifyingResult.objects.filter(
         position='1',
         driver_id__in=DriverTeam.objects
             .filter(constructor=team)
@@ -593,7 +597,16 @@ def detailed_team_view(request):
             .distinct()
     ).count()
 
-    # 6. JSON-Antwort
+    # 6. Seasons active – alle Saisons, in denen das Team Fahrer hatte
+    seasons_active = list(
+        DriverTeam.objects
+        .filter(constructor=team)
+        .values_list('season__season', flat=True)
+        .distinct()
+        .order_by('-season__season')
+    )
+
+    # 7. JSON-Antwort
     return JsonResponse({
         'team': {
             'id':          team.constructor,
@@ -613,7 +626,8 @@ def detailed_team_view(request):
             'points':  career_points,
             'podiums': career_podiums,
             'poles':   career_poles,
-        }
+        },
+        'seasons_active': seasons_active,
     })
 
 @swagger_auto_schema(
