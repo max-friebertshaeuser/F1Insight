@@ -500,21 +500,38 @@ def show_bet(request):
     })
 
 
+delete_bet_request = openapi.Schema(
+    type=openapi.TYPE_OBJECT,
+    required=['group', 'race'],
+    properties={
+        'group': openapi.Schema(
+            type=openapi.TYPE_STRING,
+            description='Unique name of the group'
+        ),
+        'race': openapi.Schema(
+            type=openapi.TYPE_STRING,
+            description='Race date in YYYY-MM-DD'
+        ),
+    },
+)
+
+# Response schemas
+delete_bet_response_ok = openapi.Response(description="Bet deleted successfully")
+delete_bet_response_400 = openapi.Response(description="Missing required fields")
+delete_bet_response_404 = openapi.Response(description="Group, race, or bet not found")
+
 @swagger_auto_schema(
     method='delete',
-    operation_summary="Delete a bet for a specific race",
-    manual_parameters=[
-        openapi.Parameter(
-            'race_id',
-            openapi.IN_PATH,
-            description="Race date (ID)",
-            type=openapi.TYPE_STRING,
-            required=True
-        ),
-    ],
+    operation_summary="Delete a Bet",
+    operation_description=(
+        "Deletes the authenticated user's bet for the specified group and race.\n\n"
+        "Request body must include the unique `group` name and `race` date (YYYY-MM-DD)."
+    ),
+    request_body=delete_bet_request,
     responses={
-        200: openapi.Response("Bet deleted successfully."),
-        404: openapi.Response("Bet not found."),
+        200: delete_bet_response_ok,
+        400: delete_bet_response_400,
+        404: delete_bet_response_404,
     }
 )
 @permission_classes([IsAuthenticated])
@@ -582,25 +599,84 @@ def delete_bet(request):
     )
 
 
-@swagger_auto_schema(
-    method='put',
-    operation_summary="Update a bet for a specific race",
-    request_body=openapi.Schema(
+race_id_param = openapi.Parameter(
+    'race_id', openapi.IN_PATH,
+    description='Race date in YYYY-MM-DD format',
+    type=openapi.TYPE_STRING,
+    required=True
+)
+
+# Request body schema for update_bet
+update_bet_request = openapi.Schema(
+    type=openapi.TYPE_OBJECT,
+    properties={
+        'group': openapi.Schema(
+            type=openapi.TYPE_STRING,
+            description='Unique group name'
+        ),
+        'race': openapi.Schema(
+            type=openapi.TYPE_STRING,
+            description='Race date in YYYY-MM-DD (should match path)'
+        ),
+        'bet_top_3': openapi.Schema(
+            type=openapi.TYPE_ARRAY,
+            description='List of driver codes in new Top-3 order',
+            items=openapi.Schema(type=openapi.TYPE_STRING)
+        ),
+        'bet_last_5': openapi.Schema(
+            type=openapi.TYPE_STRING,
+            description='Driver code for best of last 5',
+            nullable=True
+        ),
+        'bet_last_10': openapi.Schema(
+            type=openapi.TYPE_STRING,
+            description='Driver code for best of positions 6–10',
+            nullable=True
+        ),
+        'bet_fastest_lap': openapi.Schema(
+            type=openapi.TYPE_STRING,
+            description='Driver code for fastest lap',
+            nullable=True
+        ),
+    },
+    required=['group', 'race']
+)
+
+# Response schema
+update_bet_response = openapi.Response(
+    description="Bet updated successfully",
+    schema=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
-            "bet_top_3": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING),
-                                        description="Top 3 drivers bet"),
-            "bet_last_5": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING),
-                                         description="Last 5 drivers bet"),
-            "bet_last_10": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING),
-                                          description="Last 10 drivers bet"),
-            "bet_fastest_lap": openapi.Schema(type=openapi.TYPE_STRING, description="Driver ID for fastest lap"),
-        },
-        required=[],
-    ),
+            'message': openapi.Schema(type=openapi.TYPE_STRING),
+            'bet': openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'id':              openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'user':            openapi.Schema(type=openapi.TYPE_STRING),
+                    'group':           openapi.Schema(type=openapi.TYPE_STRING),
+                    'race':            openapi.Schema(type=openapi.TYPE_STRING),
+                    'bet_top_3':       openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
+                    'bet_last_5':      openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
+                    'bet_last_10':     openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
+                    'bet_fastest_lap': openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
+                    'bet_date':        openapi.Schema(type=openapi.TYPE_STRING, description='ISO datetime'),
+                }
+            )
+        }
+    )
+)
+
+@swagger_auto_schema(
+    method='put',
+    operation_summary="Update a Bet",
+    operation_description="Modify an existing bet for the authenticated user in the specified group and race.",
+    manual_parameters=[race_id_param],
+    request_body=update_bet_request,
     responses={
-        200: openapi.Response("Bet updated successfully."),
-        404: openapi.Response("No bet found for this race."),
+        200: update_bet_response,
+        400: openapi.Response(description="Missing or invalid fields"),
+        404: openapi.Response(description="Group, race, or bet not found"),
     }
 )
 @permission_classes([IsAuthenticated])
