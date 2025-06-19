@@ -769,27 +769,20 @@ def update_bet(request, race_id):
         }
     }, status=status.HTTP_200_OK)
 
-race_param = openapi.Parameter(
-    'race',
-    openapi.IN_QUERY,
-    description="Date of the race to fetch info for (YYYY-MM-DD)",
+race_query_param = openapi.Parameter(
+    'race', openapi.IN_QUERY,
+    description='Race date YYYY-MM-DD',
     type=openapi.TYPE_STRING,
     required=True
 )
 @swagger_auto_schema(
     method='get',
-    operation_summary="Get Bet Info",
-    operation_description=(
-        "Returns lists of drivers for betting:\n"
-        "- `top3`: the first three finishers of the given race\n"
-        "- `last5`: drivers who finished in the last 5 of the previous race\n"
-        "- `mid5`: drivers in positions 6–10 of the previous race\n"
-        "- `fastest_options`: all drivers participating in the given race"
-    ),
-    manual_parameters=[race_param],
+    operation_summary="Get driver lists for betting UI",
+    manual_parameters=[race_query_param],
     responses={
-        400: openapi.Response("Missing or invalid `race` parameter"),
-        404: openapi.Response("Race or previous race not found")
+        200: openapi.Response('Driver lists'),
+        400: openapi.Response('Missing or invalid race parameter'),
+        404: openapi.Response('Race or previous race not found'),
     }
 )
 @api_view(["GET"])
@@ -874,40 +867,10 @@ def get_bet_info(request):
 
 @swagger_auto_schema(
     method='get',
-    operation_summary="Get the previous 5 drivers before a given driver in the standings",
-    manual_parameters=[
-        openapi.Parameter(
-            'season',
-            openapi.IN_PATH,
-            description="Season year",
-            type=openapi.TYPE_STRING,
-            required=True
-        ),
-        openapi.Parameter(
-            'driver_id',
-            openapi.IN_PATH,
-            description="Driver ID",
-            type=openapi.TYPE_STRING,
-            required=True
-        ),
-    ],
+    operation_summary="Get previous 5 drivers before position 6-10",
     responses={
-        200: openapi.Response(
-            description="List of previous 5 drivers",
-            examples={
-                "application/json": [
-                    {
-                        "driver": "verstappen",
-                        "forename": "Max",
-                        "surname": "Verstappen",
-                        "constructor": "Red Bull",
-                        "position": "2",
-                        "points": "150"
-                    }
-                ]
-            }
-        ),
-        404: openapi.Response(description="Driver or season not found or invalid position.")
+        200: openapi.Response('List of drivers'),
+        404: openapi.Response('No completed races found'),
     }
 )
 @permission_classes([IsAuthenticated])
@@ -941,24 +904,10 @@ def get_last_5_drivers_before(request):
 
 @swagger_auto_schema(
     method='get',
-    operation_summary="Get the last 5 drivers of the most recent race",
+    operation_summary="Get last 5 drivers of the most recent race",
     responses={
-        200: openapi.Response(
-            description="List of last 5 drivers in the most recent race",
-            examples={
-                "application/json": [
-                    {
-                        "driver": "sargeant",
-                        "forename": "Logan",
-                        "surname": "Sargeant",
-                        "constructor": "Williams",
-                        "position": "20",
-                        "points": "0"
-                    }
-                ]
-            }
-        ),
-        404: openapi.Response(description="No completed races found.")
+        200: openapi.Response('List of drivers'),
+        404: openapi.Response('No completed races found'),
     }
 )
 @api_view(["GET"])
@@ -991,42 +940,18 @@ def get_last_5_drivers(request):
 
 @swagger_auto_schema(
     method='post',
-    operation_summary="Get Group Info",
-    operation_description="Returns details for a given group, including member standings.",
+    operation_summary="Get group info and standings",
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
-        properties={
-            'group_name': openapi.Schema(
-                type=openapi.TYPE_STRING,
-                description='Unique name of the group'
-            ),
-        },
         required=['group_name'],
+        properties={
+            'group_name': openapi.Schema(type=openapi.TYPE_STRING),
+        }
     ),
     responses={
-        200: openapi.Response(
-            description="Group info",
-            schema=openapi.Schema(
-                type=openapi.TYPE_OBJECT,
-                properties={
-                    'group_id': openapi.Schema(type=openapi.TYPE_INTEGER),
-                    'group_name': openapi.Schema(type=openapi.TYPE_STRING),
-                    'owner': openapi.Schema(type=openapi.TYPE_STRING),
-                    'bet_stats': openapi.Schema(
-                        type=openapi.TYPE_ARRAY,
-                        items=openapi.Schema(
-                            type=openapi.TYPE_OBJECT,
-                            properties={
-                                'user': openapi.Schema(type=openapi.TYPE_STRING),
-                                'points': openapi.Schema(type=openapi.TYPE_INTEGER),
-                            }
-                        )
-                    ),
-                }
-            )
-        ),
-        400: openapi.Response(description="Missing group_name"),
-        404: openapi.Response(description="Group not found"),
+        200: openapi.Response('Group info'),
+        400: openapi.Response('Missing group_name'),
+        404: openapi.Response('Group not found'),
     }
 )
 @api_view(['Post'])
@@ -1057,21 +982,16 @@ def get_group_info(request):
 
 @swagger_auto_schema(
     method='post',
-    operation_summary="Ausgewertete Wetten und Punkte abrufen",
+    operation_summary="Get evaluated bets and user points",
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
-        properties={
-            'group': openapi.Schema(
-                type=openapi.TYPE_STRING,
-                description='Eindeutiger Gruppenname'
-            ),
-        },
         required=['group'],
+        properties={'group': openapi.Schema(type=openapi.TYPE_STRING)},
     ),
     responses={
-        200: openapi.Response('Liste der ausgewerteten Wetten und Gesamtstand der Gruppe'),
-        400: openapi.Response('Bad Request'),
-        404: openapi.Response('Gruppe nicht gefunden'),
+        200: openapi.Response('Evaluated bets and standings'),
+        400: openapi.Response('Missing group'),
+        404: openapi.Response('Group not found'),
     }
 )
 @api_view(['POST'])
