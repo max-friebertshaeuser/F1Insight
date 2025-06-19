@@ -31,7 +31,7 @@ from rest_framework.decorators import api_view
     ),
     responses={
         200: openapi.Response('Group created successfully'),
-        400: openapi.Response('Missing/invalid fields or group exists'),
+        400: openapi.Response('Missing or invalid fields or group exists'),
         404: openapi.Response('Owner not found'),
         500: openapi.Response('Server error'),
     }
@@ -383,7 +383,7 @@ race_id_param = openapi.Parameter(
     required=True
 )
 @swagger_auto_schema(
-    method='get',
+    method='post',
     operation_summary="Get a bet for a race",
     manual_parameters=[race_id_param],
     request_body=openapi.Schema(
