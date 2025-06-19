@@ -8,7 +8,7 @@ const navRoutes = [
     { name: 'Standings', path: '/standings' },
     { name: 'Drivers', path: '/drivers' },
     { name: 'Teams', path: '/teams' },
-    { name: 'Comparison', path: '/comparison' },
+    //{ name: 'Comparison', path: '/comparison' },
     { name: 'Betting Game', path: '/bettinggame' },
 
 ];
