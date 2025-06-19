@@ -244,30 +244,68 @@ def show_all_races_to_bet(request):
     return JsonResponse(data)
 
 
+driver_item = openapi.Schema(
+    type=openapi.TYPE_OBJECT,
+    properties={
+        'driver_id': openapi.Schema(type=openapi.TYPE_STRING, description='Driver code'),
+        'name':      openapi.Schema(type=openapi.TYPE_STRING, description='Driver full name'),
+    }
+)
+
+bet_top3_param = openapi.Parameter(
+    'bet_top_3', openapi.IN_BODY,
+    description='Array of 3 driver codes in predicted order',
+    type=openapi.TYPE_ARRAY,
+    items=openapi.Schema(type=openapi.TYPE_STRING),
+    required=False,
+)
+
 @swagger_auto_schema(
     method='post',
-    operation_summary="Create a new bet for a race",
+    operation_summary="Place a Bet",
+    operation_description="Creates a new bet for the given user, group, and race.",
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
+        required=['group', 'race', 'bet_top_3'],
         properties={
-            "Bsp": '{"group": 1,"race": "2025-12-07","bet_top_3": ["norris", "max_verstappen", "lawson"],"bet_last_5": "ocon","bet_last_10": "ocon","bet_fastest_lap": "max_verstappen"}',
-            "race": openapi.Schema(type=openapi.TYPE_STRING, description="Race date (ID)"),
-            "group": openapi.Schema(type=openapi.TYPE_INTEGER, description="Group ID"),
-            "bet_top_3": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING),
-                                        description="Top 3 drivers bet"),
-            "bet_last_5": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING),
-                                         description="Last 5 drivers bet"),
-            "bet_last_10": openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING),
-                                          description="Last 10 drivers bet"),
-            "bet_fastest_lap": openapi.Schema(type=openapi.TYPE_STRING, description="Driver ID for fastest lap"),
+            'group':            openapi.Schema(type=openapi.TYPE_STRING, description='Unique group name'),
+            'race':             openapi.Schema(type=openapi.TYPE_STRING, description='Race date YYYY-MM-DD'),
+            'bet_top_3':        openapi.Schema(
+                type=openapi.TYPE_ARRAY,
+                description='List of exactly 3 driver codes in prediction order',
+                items=openapi.Schema(type=openapi.TYPE_STRING)
+            ),
+            'bet_last_5':       openapi.Schema(type=openapi.TYPE_STRING, description='Driver code for best of last 5'),
+            'bet_last_10':      openapi.Schema(type=openapi.TYPE_STRING, description='Driver code for best of positions 6–10'),
+            'bet_fastest_lap':  openapi.Schema(type=openapi.TYPE_STRING, description='Driver code for fastest lap'),
         },
-        required=["race", "group"],
     ),
     responses={
-        200: openapi.Response("Bet created successfully"),
-        400: openapi.Response("You have already placed a bet for this race."),
-        404: openapi.Response("Race not found."),
-        500: openapi.Response("Server error"),
+        201: openapi.Response(
+            description="Bet created successfully",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING),
+                    'bet': openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            'id':              openapi.Schema(type=openapi.TYPE_INTEGER),
+                            'user':            openapi.Schema(type=openapi.TYPE_STRING),
+                            'group':           openapi.Schema(type=openapi.TYPE_STRING),
+                            'race':            openapi.Schema(type=openapi.TYPE_STRING),
+                            'bet_top_3':       openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
+                            'bet_last_5':      openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
+                            'bet_last_10':     openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
+                            'bet_fastest_lap': openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
+                            'bet_date':        openapi.Schema(type=openapi.TYPE_STRING, description='ISO datetime'),
+                        }
+                    )
+                }
+            )
+        ),
+        400: openapi.Response(description="Missing or invalid fields"),
+        404: openapi.Response(description="Race or group not found"),
     }
 )
 @api_view(["POST"])
