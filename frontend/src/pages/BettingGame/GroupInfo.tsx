@@ -1,4 +1,3 @@
-// src/pages/GroupInfo.tsx
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getAuthHeaders, API_BASE_GROUPS } from '../../utils/api';
@@ -36,13 +35,11 @@ export default function GroupInfo() {
   if (error)   return <p className="text-center mt-20 text-red-500">{error}</p>;
   if (!info)  return null;
 
-  // Sort top 3
   const sorted = [...info.bet_stats].sort((a, b) => b.points - a.points);
   const [first, second, third, ...rest] = sorted;
 
   return (
     <div className="flex flex-col items-center bg-[#0F0F17] text-white min-h-screen py-10 px-4">
-      {/* Header */}
       <div className="w-full max-w-2xl text-center mb-12">
         <h1 className="text-4xl font-bold">{info.group_name}</h1>
         <p className="mt-2 text-lg">
@@ -59,7 +56,6 @@ export default function GroupInfo() {
         </p>
       </div>
 
-      {/* Podium */}
       <div className="flex items-end space-x-8 mb-12">
         {second && (
           <div className="flex flex-col items-center">
@@ -90,7 +86,6 @@ export default function GroupInfo() {
         )}
       </div>
 
-      {/* Remaining */}
       {rest.length > 0 && (
         <div className="w-full max-w-2xl bg-gray-800 rounded-lg shadow p-6 mb-12">
           <h2 className="text-2xl font-semibold mb-4">Additional Rankings</h2>
@@ -115,7 +110,6 @@ export default function GroupInfo() {
         </div>
       )}
 
-      {/* Actions */}
       <div className="flex space-x-4 mb-8">
         <Link
           to={`/groups/${groupName}/evaluated`}
