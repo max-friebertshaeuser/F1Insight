@@ -1,4 +1,3 @@
-// src/pages/JoinGroup.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getAuthHeaders, API_BASE_GROUPS } from '../../utils/api';
@@ -20,7 +19,6 @@ const JoinGroup: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  // 1) Prüfe Membership und leite ggf. sofort weiter
   useEffect(() => {
     if (!groupName) return;
     (async () => {
@@ -36,12 +34,10 @@ const JoinGroup: React.FC = () => {
         }
         const data: GroupInfoData = await res.json();
 
-        // aktueller User
         const currentUser = localStorage.getItem('username');
         const member = data.bet_stats.some(bs => bs.user === currentUser);
 
         if (member) {
-          // LEITUNG: sofort navigieren
           navigate(`/groups/${groupName}`, { replace: true });
           return;
         }
@@ -53,7 +49,6 @@ const JoinGroup: React.FC = () => {
     })();
   }, [groupName, navigate]);
 
-  // 2) Nach Beitritt ebenfalls weiterleiten
   const handleJoin = async () => {
     try {
       const res = await fetch(`${API_BASE_GROUPS}/join/`, {
@@ -62,7 +57,7 @@ const JoinGroup: React.FC = () => {
         body: JSON.stringify({ group_name: groupName }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.status || json.error || 'Fehler beim Beitreten');
+      if (!res.ok) throw new Error(json.status || json.error || 'error while joining group');
       navigate(`/groups/${groupName}`, { replace: true });
     } catch (err: any) {
       setError(err.message);

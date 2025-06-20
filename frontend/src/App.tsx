@@ -9,7 +9,6 @@ import DriverPage from "./pages/DriverPage.tsx"; // Ensure you have your CSS fil
 import Login from "./pages/Login.tsx";
 import Register from "./pages/Register.tsx";
 import PrivateRoute from "./types/PrivateRoute.tsx";
-import BettingGame from "./pages/BettingGame/BettingGame.tsx";
 import Logout from "./pages/Logout.tsx";
 import TeamsPage from "./pages/TeamsPage.tsx";
 import TeamDetailPage from "./pages/TeamDetailPage.tsx";
@@ -19,10 +18,10 @@ import DeleteBet from "./pages/BettingGame/DeleteBet.tsx";
 import GroupInfo from "./pages/BettingGame/GroupInfo.tsx";
 import JoinGroup from "./pages/BettingGame/JoinGroup.tsx";
 import SetBet from "./pages/BettingGame/SetBet.tsx";
-import ShowBet from "./pages/BettingGame/ShowBet.tsx";
 import UpdateBet from "./pages/BettingGame/UpdateBet.tsx";
 import LeaveGroup from "./pages/BettingGame/LeaveGroup.tsx";
 import RaceBets from "./pages/BettingGame/RaceBets.tsx";
+import EvaluatedBetsTable from "./pages/BettingGame/EvaluatedBetsTable.tsx";
 
 function App() {
     return (
@@ -38,22 +37,22 @@ function App() {
                     <Route path="/logout" element={<Logout />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/drivers" element={<DriversPage/>} />
-                    <Route path="/bettinggame" element={<PrivateRoute><BettingGame /></PrivateRoute>} />
                     <Route path="/teams" element={<TeamsPage />} />
                     {/* Add more pages here */}
                     <Route path="/driver/:id" element={<DriverPage />} />
                     <Route path="/team/:id" element={<TeamDetailPage />} />
                     <Route path="*" element={<NotFoundPage />} />
-                    <Route path="/groups/create" element={<CreateGroup />} />
-                    <Route path="/groups/:groupName/join" element={<JoinGroup />} />
-                    <Route path="/groups" element={<GroupsList />} />
-                    <Route path="/groups/:groupName" element={<GroupInfo />} />
-                    <Route path="/groups/:groupName/leave" element={<LeaveGroup />} />
-                    <Route path="groups/:groupName/bets" element={<RaceBets />} />
-                    <Route path="groups/:groupName/bets/set/:raceId" element={<SetBet />} />
-                    <Route path="groups/:groupName/bets/view/:raceId" element={<ShowBet />} />
-                    <Route path="groups/:groupName/bets/edit/:raceId" element={<UpdateBet />} />
-                    <Route path="groups/:groupName/bets/delete/:raceId" element={<DeleteBet />} />
+                    <Route path="/groups/create" element={<PrivateRoute><CreateGroup /></PrivateRoute>} />
+                    <Route path="/groups/:groupName/join" element={<PrivateRoute><JoinGroup /></PrivateRoute>} />
+                    <Route path="/bettinggame" element={<PrivateRoute><GroupsList /></PrivateRoute>} />
+                    <Route path="/groups/:groupName" element={<PrivateRoute><GroupInfo /></PrivateRoute>} />
+                    <Route path="/groups/:groupName/leave" element={<PrivateRoute><LeaveGroup /></PrivateRoute>} />
+                    <Route path="groups/:groupName/bets" element={<PrivateRoute><RaceBets /></PrivateRoute>} />
+                    <Route path="groups/:groupName/bets/set/:raceId" element={<PrivateRoute><SetBet /></PrivateRoute>} />
+                    <Route path="groups/:groupName/bets/edit/:raceId" element={<PrivateRoute><UpdateBet /></PrivateRoute>} />
+                    <Route path="groups/:groupName/bets/delete/:raceId" element={<PrivateRoute><DeleteBet /></PrivateRoute>} />
+                    <Route path="groups/:groupName/evaluated" element={<PrivateRoute><EvaluatedBetsTable /></PrivateRoute>} />
+
 
                 </Routes>
             </main>

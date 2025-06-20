@@ -1,5 +1,4 @@
-// src/pages/DeleteBet.tsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getAuthHeaders, API_BASE_BETTING } from '../../utils/api';
 
@@ -15,6 +14,7 @@ export default function DeleteBet() {
       const res = await fetch(`${API_BASE_BETTING}/${raceId}/delete/`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
+        body: JSON.stringify({ group: groupName, race: raceId }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || json.message || 'Delete failed');

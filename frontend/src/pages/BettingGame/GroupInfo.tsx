@@ -67,7 +67,7 @@ export default function GroupInfo() {
               2
             </div>
             <p className="mt-2">{second.user}</p>
-            <p className="text-sm text-gray-400">{second.points} Pkt.</p>
+            <p className="text-sm text-gray-400">{second.points} Pts.</p>
           </div>
         )}
         {first && (
@@ -76,7 +76,7 @@ export default function GroupInfo() {
               1
             </div>
             <p className="mt-2">{first.user}</p>
-            <p className="text-sm text-gray-400">{first.points} Pkt.</p>
+            <p className="text-sm text-gray-400">{first.points} Pts.</p>
           </div>
         )}
         {third && (
@@ -85,7 +85,7 @@ export default function GroupInfo() {
               3
             </div>
             <p className="mt-2">{third.user}</p>
-            <p className="text-sm text-gray-400">{third.points} Pkt.</p>
+            <p className="text-sm text-gray-400">{third.points} Pts.</p>
           </div>
         )}
       </div>
@@ -116,24 +116,26 @@ export default function GroupInfo() {
       )}
 
       {/* Actions */}
-      <div className="flex space-x-4">
+      <div className="flex space-x-4 mb-8">
+        <Link
+          to={`/groups/${groupName}/evaluated`}
+          className="px-6 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition"
+        >
+          Evaluated Bets
+        </Link>
         <Link
           to={`/groups/${groupName}/bets`}
           className="px-6 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition"
         >
           Manage Bets
         </Link>
+      </div>
+      <div className="flex space-x-4">
         <Link
           to={`/groups/${groupName}/leave`}
           className="px-6 py-2 bg-red-600 rounded-lg hover:bg-red-700 transition"
         >
           Leave group
-        </Link>
-        <Link
-          to="/groups"
-          className="px-6 py-2 bg-gray-600 rounded-lg hover:bg-gray-500 transition"
-        >
-          Back to "My Groups"
         </Link>
       </div>
     </div>

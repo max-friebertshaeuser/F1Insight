@@ -1,4 +1,3 @@
-// src/utils/authFetch.ts
 import { useAuth } from '../contexts/AuthContext';
 
 export const useAuthFetch = () => {
@@ -8,25 +7,22 @@ export const useAuthFetch = () => {
     const accessToken = localStorage.getItem('access_token');
     const refreshToken = localStorage.getItem('refresh_token');
 
-    // 🔒 Wenn beide Tokens fehlen → stillschweigend Logout & Redirect
     if (!accessToken && !refreshToken) {
       logout();
       return new Response(null, { status: 401, statusText: 'Unauthorized' });
     }
 
-    // 📢 Wenn nur einer fehlt → Logging & Logout
     if (!accessToken) {
-      console.log('[authFetch] Kein access_token vorhanden');
+      console.log('[authFetch] no access_token found');
       logout();
       return new Response(null, { status: 401, statusText: 'Unauthorized' });
     }
 
     if (!refreshToken) {
-      console.log('[authFetch] Kein refresh_token vorhanden');
+      console.log('[authFetch] no refresh_token found');
     }
 
-    // ✅ Zugriff mit vorhandenem access_token
-    console.log(`[authFetch] Anfrage an ${url} gestartet mit access_token`);
+    console.log(`[authFetch] request to ${url} started with access_token`);
 
     const headers = {
       ...options.headers,
@@ -36,26 +32,26 @@ export const useAuthFetch = () => {
     let response = await fetch(url, { ...options, headers });
 
     if (response.status === 401) {
-      console.log('[authFetch] 401 erhalten – versuche refreshAccessToken()');
+      console.log('[authFetch] 401 received – try refreshAccessToken()');
 
       const refreshed = await refreshAccessToken();
 
       if (refreshToken && refreshed) {
-        console.log('[authFetch] Token erfolgreich erneuert – wiederhole Anfrage');
+        console.log('[authFetch] Token refresh successful – retry request');
         const newAccessToken = localStorage.getItem('access_token');
         const retryHeaders = {
           ...options.headers,
           Authorization: `Bearer ${newAccessToken}`,
         };
         response = await fetch(url, { ...options, headers: retryHeaders });
-        console.log(`[authFetch] Erneute Anfrage abgeschlossen mit Status ${response.status}`);
+        console.log(`[authFetch] renewed request finished with ${response.status}`);
       } else {
-        console.log('[authFetch] Token konnte nicht erneuert werden – logout');
+        console.log('[authFetch] token could not be refreshed – logout');
         logout();
         return new Response(null, { status: 401, statusText: 'Unauthorized' });
       }
     } else {
-      console.log(`[authFetch] Anfrage an ${url} abgeschlossen mit Status ${response.status}`);
+      console.log(`[authFetch] request to ${url} finished with ${response.status}`);
     }
 
     return response;

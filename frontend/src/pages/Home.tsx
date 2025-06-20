@@ -1,10 +1,14 @@
 function Home() {
-    return (
-        <div className="flex flex-col items-center bg-red-400 justify-center min-h-screen text-white">
-            <h1 className="text-4xl mb-4 font-Formula1Bold">Welcome to the Home Page</h1>
-            <p className="text-lg text-gray-700">This is the home page of our application.</p>
-        </div>
-    );
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-f1-black text-f1-white font-fregular px-4 sm:px-8">
+      <div className="text-center space-y-4">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-fwide">Welcome to F1 Insight</h1>
+        <h2 className="text-base sm:text-lg lg:text-xl text-gray-300">
+          Formula 1 statistics and betting game
+        </h2>
+      </div>
+    </div>
+  );
 }
 
 export default Home;
