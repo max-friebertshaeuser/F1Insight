@@ -295,8 +295,8 @@ def set_bet(request):
     data = request.data
 
     # 1) Pflichtdaten prüfen
-    race_str = data.get("race")
-    group_name = data.get("group")
+    race_str    = data.get("race")
+    group_name  = data.get("group")
     if not race_str or not group_name:
         return JsonResponse(
             {"error": "Missing race or group field."},
@@ -305,42 +305,39 @@ def set_bet(request):
 
     # 2) Race & Group laden
     try:
-        race = Race.objects.get(date=datetime.strptime(race_str, "%Y-%m-%d").date())
+        race  = Race.objects.get(date=datetime.strptime(race_str, "%Y-%m-%d").date())
+        group = Group.objects.get(name=group_name)
     except (ValueError, Race.DoesNotExist):
         return JsonResponse({"error": "Race not found or invalid date."},
                             status=status.HTTP_404_NOT_FOUND)
-
-    try:
-        group = Group.objects.get(name=group_name)
     except Group.DoesNotExist:
-        return JsonResponse({"error": "Group not found."}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({"error": "Group not found."},
+                            status=status.HTTP_404_NOT_FOUND)
 
-    # 3) Keine Doppel-Wetten
-    if Bet.objects.filter(user=user, race=race).exists():
+    # 3) Keine Doppel-Wetten **in dieser Gruppe**
+    if Bet.objects.filter(user=user, race=race, group=group).exists():
         return JsonResponse(
-            {"error": "You have already placed a bet for this race."},
+            {"error": "You have already placed a bet for this race in that group."},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # 4) Hilfsfunktion zum Fahrer-Lookup
+    # 4) Fahrer-Lookup-Helper
     def get_driver(code):
-        if not code:
-            return None
-        return Driver.objects.filter(driver__iexact=code).first()
+        return Driver.objects.filter(driver__iexact=code).first() if code else None
 
     # 5) Bet anlegen (ohne Top-3)
     bet = Bet.objects.create(
         user=user,
         group=group,
         race=race,
-        bet_last_5=get_driver(data.get("bet_last_5")),
-        bet_last_10=get_driver(data.get("bet_last_10")),
-        bet_fastest_lap=get_driver(data.get("bet_fastest_lap")),
+        bet_last_5      = get_driver(data.get("bet_last_5")),
+        bet_last_10     = get_driver(data.get("bet_last_10")),
+        bet_fastest_lap = get_driver(data.get("bet_fastest_lap")),
     )
 
-    # 6) Top-3 über Through-Model anlegen
+    # 6) Top-3 über Through-Model
     top3_codes = data.get("bet_top_3", [])
-    not_found = []
+    not_found   = []
     for idx, code in enumerate(top3_codes, start=1):
         driver = get_driver(code)
         if not driver:
@@ -349,7 +346,6 @@ def set_bet(request):
             BetTop3.objects.create(bet=bet, driver=driver, position=idx)
 
     if not_found:
-        # Rollback Top3 if einige ungültig waren
         BetTop3.objects.filter(bet=bet).delete()
         bet.delete()
         return JsonResponse(
@@ -357,21 +353,21 @@ def set_bet(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # 7) Alles gespeichert – Antwort mit exakter Reihenfolge
+    # 7) Antwort mit exakter Reihenfolge
     ordered_top3 = [bt3.driver.driver for bt3 in bet.bettop3_set.all()]
 
     return JsonResponse({
         "message": "Bet created successfully",
         "bet": {
-            "id": bet.id,
-            "user": user.username,
-            "group": group.id,
-            "race": race_str,
-            "bet_top_3": ordered_top3,
-            "bet_last_5": bet.bet_last_5.driver if bet.bet_last_5 else None,
-            "bet_last_10": bet.bet_last_10.driver if bet.bet_last_10 else None,
+            "id":              bet.id,
+            "user":            user.username,
+            "group":           group.name,
+            "race":            race_str,
+            "bet_top_3":       ordered_top3,
+            "bet_last_5":      bet.bet_last_5.driver      if bet.bet_last_5      else None,
+            "bet_last_10":     bet.bet_last_10.driver     if bet.bet_last_10     else None,
             "bet_fastest_lap": bet.bet_fastest_lap.driver if bet.bet_fastest_lap else None,
-            "bet_date": bet.bet_date.isoformat(),
+            "bet_date":        bet.bet_date.isoformat(),
         }
     }, status=status.HTTP_201_CREATED)
 
