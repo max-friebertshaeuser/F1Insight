@@ -28,6 +28,7 @@ function Standings() {
         const data = await response.json();
         localStorage.setItem('access_token', data.access);
         localStorage.setItem('refresh_token', data.refresh);
+        localStorage.setItem('username', data.username);
 
         navigate('/bettinggame');
         } catch (err: any) {
