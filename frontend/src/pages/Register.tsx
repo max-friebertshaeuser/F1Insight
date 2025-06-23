@@ -37,72 +37,89 @@ function Standings() {
     };
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-[#0F0F17] text-white">
+        <div className="flex flex-col items-center justify-center min-h-screen bg-f1-black text-f1-white font-fregular px-4">
             <form
-            onSubmit={handleSubmit}
-            className="bg-black p-6 rounded-lg shadow-md w-full max-w-sm"
-        >
-            <h1 className="text-4xl font-bold mb-6">Register</h1>
-
-            <div className="mb-4">
-            <label htmlFor="username" className="block text-sm font-medium mb-1">
-                username
-            </label>
-            <input
-                type="text"
-                id="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                className="w-full border border-gray-300 rounded px-3 py-2"
-            />
-            </div>
-
-            <div className="mb-4">
-            <label htmlFor="mail" className="block text-sm font-medium mb-1">
-                mail
-            </label>
-            <input
-                type="text"
-                id="mail"
-                value={mail}
-                onChange={(e) => setMail(e.target.value)}
-                required
-                className="w-full border border-gray-300 rounded px-3 py-2"
-            />
-            </div>
-
-            <div className="mb-4">
-            <label htmlFor="password" className="block text-sm font-medium mb-1">
-                password
-            </label>
-            <input
-                type="password"
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full border border-gray-300 rounded px-3 py-2"
-            />
-            </div>
-
-            {error && (
-            <p className="text-red-600 text-sm mb-4 text-center">{error}</p>
-            )}
-
-            <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+                onSubmit={(event => handleSubmit(event))}
+                className="bg-[#1a1a1a] p-10 rounded-xl shadow-xl w-full max-w-xl min-w-[22rem] border border-f1-white/10"
             >
-            Sign up
-            </button>
-            <p className="mt-4 text-sm text-center">
-                Already have an account?{' '}
-                <Link to="/login" className="text-blue-400 hover:underline">
-                    Log in
-                </Link>
-            </p>        
-        </form>
+
+            <h1 className="text-5xl font-fwide mb-8 text-center text-white drop-shadow-xl break-words w-full">
+                    Sign Up
+                </h1>
+
+
+                <div className="mb-6">
+                    <label
+                        htmlFor="username"
+                        className="block text-sm mb-2 uppercase tracking-widest text-white/60 font-fregular"
+                    >
+                        Username
+                    </label>
+                    <input
+                        type="text"
+                        id="username"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        required
+                        className="w-full bg-transparent border border-white/20 rounded px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-f1-white"
+                        placeholder="Choose a username"
+                    />
+                </div>
+
+                <div className="mb-6">
+                    <label
+                        htmlFor="mail"
+                        className="block text-sm mb-2 uppercase tracking-widest text-white/60 font-fregular"
+                    >
+                        Email
+                    </label>
+                    <input
+                        type="email"
+                        id="mail"
+                        value={mail}
+                        onChange={(e) => setMail(e.target.value)}
+                        required
+                        className="w-full bg-transparent border border-white/20 rounded px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-f1-white"
+                        placeholder="Your email address"
+                    />
+                </div>
+
+                <div className="mb-6">
+                    <label
+                        htmlFor="password"
+                        className="block text-sm mb-2 uppercase tracking-widest text-white/60 font-fregular"
+                    >
+                        Password
+                    </label>
+                    <input
+                        type="password"
+                        id="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="w-full bg-transparent border border-white/20 rounded px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-f1-white"
+                        placeholder="Create a password"
+                    />
+                </div>
+
+                {error && (
+                    <p className="text-red-500 text-sm mb-6 text-center">{error}</p>
+                )}
+
+                <button
+                    type="submit" onSubmit={handleSubmit}
+                    className="w-full bg-f1-white text-f1-black font-fbold py-3 rounded hover:bg-white/90 transition-all"
+                >
+                    Join the Team
+                </button>
+
+                <p className="mt-6 text-sm text-center text-white/50">
+                    Already have an account?{' '}
+                    <Link to="/login" className="text-f1-white hover:underline">
+                        Enter Grid
+                    </Link>
+                </p>
+            </form>
         </div>
     );
 }

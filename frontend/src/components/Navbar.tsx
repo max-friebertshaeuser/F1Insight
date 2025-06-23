@@ -5,6 +5,7 @@ import "../App.css";
 import logo from '../assets/logo.svg';
 
 const navRoutes = [
+
     { name: 'Standings', path: '/standings' },
     { name: 'Drivers', path: '/drivers' },
     { name: 'Teams', path: '/teams' },
@@ -19,14 +20,14 @@ const Navbar = () => {
     return (
         <nav className="bg-f1-black text-f1-white font-fregular py-4 px-6 fixed top-0 left-0 w-full z-50">
             <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
+                <NavLink key={'home'} to="/" className="flex items-center space-x-4">
                     <img
                         src={logo}
                         alt="F1 Logo"
                         className="h-6"
                     />
                     <span className="text-xl font-fbold">Insight</span>
-                </div>
+                </NavLink>
 
                 <div className="hidden md:flex space-x-6 text-smm">
                     {navRoutes.map((route) => (
