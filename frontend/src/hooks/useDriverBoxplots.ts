@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 
 export interface DriverBoxplot {
+    driverId: string;
     x: number;
     min: number;
     firstQuartile: number;
@@ -26,6 +27,8 @@ export function useDriverBoxplots(driverId: string) {
                     body: JSON.stringify({ driver_id: driverId }),
                 });
                 const json = await res.json();
+                const data = json.boxPlots as DriverBoxplot[];
+                data.driverId = driverId; // Ensure driverId is set correctly
                 if (!ignore) setData(json.boxPlots);
             } catch (e: any) {
                 if (!ignore) setError(e.message);

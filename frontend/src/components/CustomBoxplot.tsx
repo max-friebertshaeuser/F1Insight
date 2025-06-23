@@ -37,7 +37,6 @@ export default function CustomBoxplot({driverId, width, height, team, team2, dri
     } = useTooltip<{
   season: string;
         driver: { name: string; min: number; max: number; median: number };
-        driver2?: { name: string; min: number; max: number; median: number };
     }>();
 
 
